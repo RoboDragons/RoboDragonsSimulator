@@ -87,6 +87,8 @@ body acceleration `(v_cmd - v) / tau` with tau = 5 ms / ln 2 (half the error per
 robot command loss, command delay and robot rotation error (Realistic: 1.3 mm / 10 mrad / 3 % loss / 0.5). JSON fields override the preset.
 Clients must re-send commands (< 0.1 s), as with ER-Force. Comparison with the old model: docs/server_investigation/force_start_er_model.png
 
+[ER-Force Open Source](https://github.com/robotics-erlangen/framework)
+
 ## Kicking (metal plate with friction)
 A kick is a short stroke of the kicker plate (`kickerStroke` 20 mm, uniform acceleration to the plate speed) that pushes the ball through a penalty contact with
 Coulomb friction between the metal plate and the ball (`kickerFriction` 0.4) on the full contact-point slip, spin included. The backspin of a spinning dribbler is largely wiped out
