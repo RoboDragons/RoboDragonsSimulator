@@ -1,0 +1,11 @@
+syntax = "proto2";
+package robo_dragons_cafe.network.proto.ssl.vision;
+import "ssl/vision/vision_detection.proto";
+import "ssl/vision/vision_geometry.proto";
+
+option java_package = "robo_dragons_cafe.network.proto.ssl.vision";
+
+message Packet {
+  optional Frame detection = 1;
+  optional Geometry geometry = 2;
+}

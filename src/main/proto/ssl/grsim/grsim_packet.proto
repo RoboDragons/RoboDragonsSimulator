@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+import "ssl/grsim/grsim_command.proto";
+import "ssl/grsim/grsim_replacement.proto";
+
+package robo_dragons_cafe.network.proto.ssl.grsim;
+option java_package = "robo_dragons_cafe.network.proto.ssl.grsim";
+
+message Packet {
+  optional Commands commands = 1;
+  optional Replacement replacement = 2;
+}

@@ -1,0 +1,59 @@
+import org.gradle.internal.os.OperatingSystem
+
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.google.protobuf' version '0.10.0'
+}
+
+repositories { mavenCentral() }
+
+def lwjglVersion = '3.3.6'
+def protobufVersion = '4.31.1'
+
+def lwjglNatives = {
+    def os = OperatingSystem.current()
+    def arch = System.getProperty('os.arch')
+    def arm = arch.startsWith('aarch64') || arch.startsWith('arm')
+    if (os.isWindows()) return arm ? 'natives-windows-arm64' : 'natives-windows'
+    if (os.isMacOsX()) return arm ? 'natives-macos-arm64' : 'natives-macos'
+    return arm ? 'natives-linux-arm64' : 'natives-linux'
+}()
+
+dependencies {
+    implementation "com.google.protobuf:protobuf-java:$protobufVersion"
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+    implementation 'com.google.code.gson:gson:2.11.0'
+
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+    implementation 'org.lwjgl:lwjgl'
+    implementation 'org.lwjgl:lwjgl-glfw'
+    implementation 'org.lwjgl:lwjgl-opengl'
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-opengl::$lwjglNatives"
+
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
+}
+
+protobuf {
+    protoc { artifact = "com.google.protobuf:protoc:$protobufVersion" }
+}
+
+application {
+    mainClass = 'ssl.sim.Main'
+    applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow'] +
+            (OperatingSystem.current().isMacOsX() ? ['-XstartOnFirstThread'] : [])
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    jvmArgs '--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow'
+    systemProperty 'study', System.getProperty('study', 'false')
+}
