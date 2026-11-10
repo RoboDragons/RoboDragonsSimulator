@@ -176,6 +176,45 @@ public class Viewer {
         }
     }
 
+    /**
+     * Zooms by {@code factor} (distance multiplier) keeping the ground point under the mouse cursor fixed on screen, by
+     * moving the look-at target. Without a ground point under the cursor (above the horizon) the target stays.
+     */
+    private void zoomAtCursor(double factor) {
+        double[] cur = new double[1], curY = new double[1];
+        glfwGetCursorPos(window, cur, curY);
+        double[] before = groundPointAt(cur[0], curY[0]);
+        dist = Math.max(0.5, Math.min(40, dist * factor));
+        double[] after = groundPointAt(cur[0], curY[0]);
+        if (before != null && after != null) {
+            targetX += before[0] - after[0];
+            targetY += before[1] - after[1];
+        }
+    }
+
+    /** Ground (z = 0) point under the window position (mx, my) for the current camera, or null if the ray misses it. */
+    private double[] groundPointAt(double mx, double my) {
+        int[] ww = new int[1], wh = new int[1];
+        glfwGetWindowSize(window, ww, wh);
+        if (ww[0] <= 0 || wh[0] <= 0) return null;
+        double ex = targetX + dist * Math.cos(pitch) * Math.cos(yaw), ey = targetY + dist * Math.cos(pitch) * Math.sin(yaw);
+        double ez = dist * Math.sin(pitch);
+        // camera basis: forward towards the target, right = forward x up, up' = right x forward
+        double fx = targetX - ex, fy = targetY - ey, fz = -ez, fl = Math.sqrt(fx * fx + fy * fy + fz * fz);
+        fx /= fl; fy /= fl; fz /= fl;
+        double rx = fy, ry = -fx, rz = 0, rl = Math.hypot(rx, ry); // forward x (0,0,1)
+        rx /= rl; ry /= rl;
+        double ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
+        double th = Math.tan(FOV_Y / 2), aspect = (double) ww[0] / wh[0];
+        double nx = 2 * mx / ww[0] - 1, ny = 1 - 2 * my / wh[0];
+        double dx = fx + rx * nx * th * aspect + ux * ny * th;
+        double dy = fy + ry * nx * th * aspect + uy * ny * th;
+        double dz = fz + rz * nx * th * aspect + uz * ny * th;
+        if (dz >= -1e-9) return null;
+        double t = -ez / dz;
+        return new double[]{ex + t * dx, ey + t * dy};
+    }
+
     private void init() {
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit()) throw new IllegalStateException("Unable to initialise GLFW");
@@ -199,7 +238,7 @@ public class Viewer {
             height = Math.max(1, hh);
             glViewport(0, 0, width, height);
         });
-        glfwSetScrollCallback(window, (w, dx, dy) -> dist = Math.max(0.5, Math.min(40, dist * Math.pow(0.9, dy))));
+        glfwSetScrollCallback(window, (w, dx, dy) -> zoomAtCursor(Math.pow(0.9, dy)));
         glfwSetMouseButtonCallback(window, (w, button, action, mods) -> {
             boolean down = action == GLFW_PRESS;
             if (button == GLFW_MOUSE_BUTTON_LEFT) dragL = down;
