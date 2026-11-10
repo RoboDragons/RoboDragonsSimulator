@@ -21,7 +21,7 @@ import ssl.sim.ball.BallContacts;
  * </ul>
  */
 public class Dribbler implements RobotComponent {
-    public BallContacts.Material rubber = new BallContacts.Material(3.0e4, 0.8, 2.0);
+    public BallContacts.Material rubber;
 
     private final DCMotor motor = DCMotor.dribblerMotor();
     private final PiController controller = new PiController(0.02, 0.4, motor.maxVoltage);
@@ -37,6 +37,7 @@ public class Dribbler implements RobotComponent {
     public Dribbler(RobotSpecs s) {
         this.radius = s.rollerRadius;
         this.specs = s;
+        this.rubber = s.dribblerMaterial;
         this.nominalAxisX = s.rollerAxisX();
         this.axisZ = s.rollerAxisZ();
         this.halfLength = s.rollerHalfLength;

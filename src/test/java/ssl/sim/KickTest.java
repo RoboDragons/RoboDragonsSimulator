@@ -13,7 +13,7 @@ class KickTest {
     private static World kick(double friction, double rpm, double speed, double angle, double after, double[] out) {
         World w = new World(new FieldGeometry(FieldGeometry.Division.A));
         RobotSpecs s = new RobotSpecs();
-        s.kickerFriction = friction;
+        s.kickerMaterial = new ssl.sim.ball.BallContacts.Material(1.0e5, 0.7, friction);
         Robot r = w.addRobot(Robot.Team.BLUE, 0, s, -3, 0, 0);
         w.ball().teleport(new Vector3D(-2.65, 0, 0.0215), Vector3D.ZERO, false);
         for (int i = 0; i < 150; i++) { // approach and hold

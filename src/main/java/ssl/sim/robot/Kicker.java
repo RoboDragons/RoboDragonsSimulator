@@ -46,7 +46,7 @@ public class Kicker implements RobotComponent {
     public Kicker(RobotSpecs specs) {
         this.specs = specs;
         this.plateHalfWidth = specs.notchHalfWidth - 0.003;
-        this.plate = new BallContacts.Material(1.0e5, 0.7, specs.kickerFriction);
+        this.plate = specs.kickerMaterial;
     }
 
     /** Straight kicker plate geometry (robot frame) for display: rear face x, centre height, size. */

@@ -16,7 +16,7 @@ import ssl.sim.ball.BallContacts;
  * The chip kick itself (impulse along the commanded angle) is triggered through {@link Kicker}.
  */
 public class Chipper implements RobotComponent {
-    public BallContacts.Material plate = new BallContacts.Material(5.0e4, 0.5, 0.3);
+    public BallContacts.Material plate;
 
     private final RobotSpecs specs;
     private final double[] tip, top;
@@ -26,6 +26,7 @@ public class Chipper implements RobotComponent {
 
     public Chipper(RobotSpecs specs) {
         this.specs = specs;
+        this.plate = specs.chipperMaterial;
         this.tip = specs.chipperTip();
         this.top = specs.chipperTop();
         this.halfWidth = specs.notchHalfWidth - 0.003;
