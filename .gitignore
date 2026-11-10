@@ -27,6 +27,9 @@ Thumbs.db
 
 # Local settings (created on first start if missing)
 /config.json
+/robot_specs.yaml
+/ball_params.yaml
+/camera_params.yaml
 
 # Investigation / test-only material
 /tools/

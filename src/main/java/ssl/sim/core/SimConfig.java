@@ -34,6 +34,26 @@ public class SimConfig {
     public Ball.Params ball = new Ball.Params();
     public SslNetwork.Config network = new SslNetwork.Config();
 
+    /** One camera looking straight down. Zero values for height / coverHalfX / coverHalfY mean "automatic". */
+    public static class CameraPose {
+        /** Position above the field [m] (field frame, x along the field length). */
+        public double x, y;
+        /** Mounting height [m]; 0 = CameraConfig.height. */
+        public double height;
+        /** Half extents [m] of the field area this camera reports (centred below it); 0 = one equal share of the field. */
+        public double coverHalfX, coverHalfY;
+
+        public CameraPose() {}
+
+        public CameraPose(double x, double y, double height, double coverHalfX, double coverHalfY) {
+            this.x = x;
+            this.y = y;
+            this.height = height;
+            this.coverHalfX = coverHalfX;
+            this.coverHalfY = coverHalfY;
+        }
+    }
+
     public static class CameraConfig {
         /** Number of cameras tiled along the field length; null = 2 for division A, 1 for division B. */
         public Integer count = null;
@@ -53,6 +73,11 @@ public class SimConfig {
         public double latencySeconds = 0.0; // real delay before a frame is published (0 = none)
         /** Extra field area [m] around each camera's share that it still reports (overlap). */
         public double overlapMeters = 0.25;
+        /**
+         * Explicit camera placement (one entry per camera). null or empty = automatic: {@link #count} cameras tiled
+         * along the field length above the centre line at {@link #height}.
+         */
+        public java.util.List<CameraPose> positions = null;
 
         public int effectiveCount(FieldGeometry.Division d) {
             return Math.max(1, count != null ? count : d == FieldGeometry.Division.A ? 2 : 1);
@@ -109,6 +134,11 @@ public class SimConfig {
     }
 
     public String toJson() { return GSON.toJson(this); }
+
+    /** Reads a YAML robot parameter file (see {@link RobotSpecsYaml}) and applies it to {@link #robot}. */
+    public void loadRobotSpecs(Path file) throws IOException {
+        RobotSpecsYaml.apply(Files.readString(file, StandardCharsets.UTF_8), robot);
+    }
 
     /**
      * Parses JSON on top of the realism preset it names (default "Realistic"): fields present in the JSON override the

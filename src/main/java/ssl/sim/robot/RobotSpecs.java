@@ -1,5 +1,7 @@
 package ssl.sim.robot;
 
+import ssl.sim.ball.BallContacts;
+
 /**
  * Static robot parameters. Defaults follow the RoboCup SSL rules: the robot must fit in a cylinder
  * of 180 mm diameter and 150 mm height; kick speed is limited to 6.5 m/s.
@@ -75,9 +77,18 @@ public class RobotSpecs {
     public double rollerPreload = 1.0;
     public double rollerDampingC = 20;
     public double rollerSlideMass = 0.03;
-    /** Plate stroke [m] and friction coefficient between the metal kicker plate and the ball. */
+    /** Plate stroke [m] of the kicker. */
     public double kickerStroke = 0.02;
-    public double kickerFriction = 0.4;
+
+    // ---- ball contact materials (stiffness [N/m], dampingRatio, friction coefficient mu) -------------
+    /** Rubber of the dribbler roller (high friction). */
+    public BallContacts.Material dribblerMaterial = new BallContacts.Material(3.0e4, 0.8, 2.0);
+    /** Chipper plate (passive support of the held ball). */
+    public BallContacts.Material chipperMaterial = new BallContacts.Material(5.0e4, 0.5, 0.3);
+    /** Metal kicker plate: stiff, strongly damped (little rebound). */
+    public BallContacts.Material kickerMaterial = new BallContacts.Material(1.0e5, 0.7, 0.4);
+    /** Robot body (hull) against the ball. */
+    public BallContacts.Material bodyMaterial = new BallContacts.Material(5.0e4, 0.3, 0.5);
     public double kickerPlateThickness = 0.006;
     public double kickerPlateHeight = 0.008;
 
@@ -198,7 +209,10 @@ public class RobotSpecs {
         s.rollerDampingC = rollerDampingC;
         s.rollerSlideMass = rollerSlideMass;
         s.kickerStroke = kickerStroke;
-        s.kickerFriction = kickerFriction;
+        s.dribblerMaterial = dribblerMaterial;
+        s.chipperMaterial = chipperMaterial;
+        s.kickerMaterial = kickerMaterial;
+        s.bodyMaterial = bodyMaterial;
         s.kickerPlateThickness = kickerPlateThickness;
         s.kickerPlateHeight = kickerPlateHeight;
         return s;

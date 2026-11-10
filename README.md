@@ -104,3 +104,28 @@ contains the `network` section (the vision multicast address/port, control/blue/
 their defaults (and the realism preset values). `robotCommandLoss` / `commandDelaySeconds` are not in the file on
 purpose: they come from the `realism` preset unless you add them. CLI options (`--interface`, `--vision-port`, ...)
 override the file.
+
+## robot_specs.yaml (robot parameters and materials)
+
+`robot_specs.yaml` in the working directory (or `--robot-specs FILE`) is loaded after `config.json` and overrides its
+`robot` section. It is created on first start with every `RobotSpecs` value (geometry, drive model, wheel/limit values,
+dribbler/chipper/kicker geometry) and the ball contact materials `dribblerMaterial` (roller rubber), `chipperMaterial`,
+`kickerMaterial` and `bodyMaterial`, each `{stiffness [N/m], dampingRatio, mu}`. Every parameter is preceded by a comment
+with its physical meaning and unit. Entries can be deleted to fall back to the defaults; unknown keys are rejected.
+`rotationError` is not in the file: it comes from the realism preset. The file is read with SnakeYAML, is git-ignored,
+and `--write-default-robot-specs FILE` writes a fresh copy.
+
+## ball_params.yaml (ball parameters)
+
+`ball_params.yaml` (or `--ball-params FILE`) works like `robot_specs.yaml`: created on first start with a commented
+entry (physical meaning and unit) for every ball parameter (radius, mass, friction, rolling deceleration, restitution,
+air drag, wall friction), loaded after `config.json` and git-ignored. `--write-default-ball-params FILE` writes a fresh copy.
+
+## camera_params.yaml (cameras)
+
+`camera_params.yaml` (or `--camera-params FILE`) is created on first start like the other YAML files: commented
+parameters (image size, focal length, default height, overlap) and a `positions` list with one entry per camera
+(`x`, `y`, `height`, `coverHalfX`, `coverHalfY`, in metres; the generated file contains the automatic layout of the
+configured division). Edit or add entries to place the cameras freely; delete `positions` for the automatic layout
+(`--cameras N`). The options `--division`, `--cameras` and `--camera-height` ignore the positions in the file.
+Noise, drop-outs, latency and capture rate stay in the realism preset. `--write-default-camera-params FILE` writes a fresh copy.

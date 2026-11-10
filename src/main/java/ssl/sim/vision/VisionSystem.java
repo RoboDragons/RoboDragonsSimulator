@@ -26,18 +26,21 @@ public class VisionSystem {
      */
     public static VisionSystem forField(FieldGeometry f, SimConfig.CameraConfig cfg) {
         VisionSystem vs = new VisionSystem(cfg.frequencyHz);
-        int n = cfg.effectiveCount(f.division);
+        List<SimConfig.CameraPose> poses = cfg.positions != null && !cfg.positions.isEmpty() ? cfg.positions : autoLayout(f, cfg);
         double totalX = f.length + 2 * f.boundaryWidth, totalY = f.width + 2 * f.boundaryWidth;
-        double strip = totalX / n;
-        for (int i = 0; i < n; i++) {
-            double cx = -totalX / 2 + strip * (i + 0.5);
+        double defaultHalfX = totalX / poses.size() / 2;
+        for (int i = 0; i < poses.size(); i++) {
+            SimConfig.CameraPose p = poses.get(i);
+            double height = p.height > 0 ? p.height : cfg.height;
+            double halfX = p.coverHalfX > 0 ? p.coverHalfX : defaultHalfX;
+            double halfY = p.coverHalfY > 0 ? p.coverHalfY : totalY / 2;
             double focal = cfg.focalLengthPx;
             if (focal <= 0) {
-                double halfX = strip / 2 + cfg.overlapMeters, halfY = totalY / 2 + cfg.overlapMeters;
-                focal = cfg.height * Math.min(cfg.imageWidth / 2.0 / halfX, cfg.imageHeight / 2.0 / halfY) / 1.02;
+                double fx = halfX + cfg.overlapMeters, fy = halfY + cfg.overlapMeters;
+                focal = height * Math.min(cfg.imageWidth / 2.0 / fx, cfg.imageHeight / 2.0 / fy) / 1.02;
             }
-            Camera c = new Camera(i, new Vector3D(cx, 0, cfg.height), focal, cfg.imageWidth, cfg.imageHeight,
-                    cx, 0, strip / 2, totalY / 2);
+            Camera c = new Camera(i, new Vector3D(p.x, p.y, height), focal, cfg.imageWidth, cfg.imageHeight,
+                    p.x, p.y, halfX, halfY);
             c.positionNoiseMm = cfg.positionNoiseMm;
             c.orientationNoise = cfg.orientationNoiseMrad / 1000.0;
             c.ballNoiseMm = cfg.ballNoiseMm;
@@ -48,6 +51,17 @@ public class VisionSystem {
             vs.cameras.add(c);
         }
         return vs;
+    }
+
+    /** Automatic placement: {@code count} cameras tiled along the field length above the centre line, each over an equal strip. */
+    public static List<SimConfig.CameraPose> autoLayout(FieldGeometry f, SimConfig.CameraConfig cfg) {
+        int n = cfg.effectiveCount(f.division);
+        double totalX = f.length + 2 * f.boundaryWidth, totalY = f.width + 2 * f.boundaryWidth;
+        double strip = totalX / n;
+        List<SimConfig.CameraPose> out = new ArrayList<>();
+        for (int i = 0; i < n; i++)
+            out.add(new SimConfig.CameraPose(-totalX / 2 + strip * (i + 0.5), 0, cfg.height, strip / 2, totalY / 2));
+        return out;
     }
 
     public List<Camera> cameras() { return cameras; }

@@ -24,6 +24,7 @@ dependencies {
     implementation "com.google.protobuf:protobuf-java:$protobufVersion"
     implementation 'org.apache.commons:commons-math3:3.6.1'
     implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.yaml:snakeyaml:2.4'
 
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
     implementation 'org.lwjgl:lwjgl'

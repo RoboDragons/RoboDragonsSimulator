@@ -27,13 +27,14 @@ public class Robot extends RigidBody2D {
     private final Dribbler dribbler;
     private final Chipper chipper;
     private final List<RobotComponent> components = new ArrayList<>();
-    private final BallContacts.Material bodyMaterial = new BallContacts.Material(5.0e4, 0.3, 0.5);
+    private final BallContacts.Material bodyMaterial;
     private double time;
 
     public Robot(Team team, int id, RobotSpecs specs) {
         this.team = team;
         this.id = id;
         this.specs = specs;
+        this.bodyMaterial = specs.bodyMaterial;
         this.mass = specs.mass;
         this.inertia = specs.effectiveInertia();
         this.shape = new RobotShape(specs);
