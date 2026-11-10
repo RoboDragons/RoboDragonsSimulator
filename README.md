@@ -111,7 +111,7 @@ override the file.
 `robot` section. It is created on first start with every `RobotSpecs` value (geometry, drive model, wheel/limit values,
 dribbler/chipper/kicker geometry) and the ball contact materials `dribblerMaterial` (roller rubber), `chipperMaterial`,
 `kickerMaterial` and `bodyMaterial`, each `{stiffness [N/m], dampingRatio, mu}`. Every parameter is preceded by a comment
-with its physical meaning and unit. Entries can be deleted to fall back to the defaults; unknown keys are rejected.
+with its physical meaning and unit; plain angles (`wheelAngles`) are in degrees and converted to radians when loaded; angular rates and accelerations stay in rad/s and rad/s^2. Entries can be deleted to fall back to the defaults; unknown keys are rejected.
 `rotationError` is not in the file: it comes from the realism preset. The file is read with SnakeYAML, is git-ignored,
 and `--write-default-robot-specs FILE` writes a fresh copy.
 

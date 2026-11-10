@@ -16,6 +16,10 @@ public final class RobotSpecsYaml {
     /** Fields that are not written: rotationError comes from the realism preset. */
     private static final java.util.Set<String> EXCLUDED = java.util.Set.of("rotationError");
 
+    /** Plain angles (not rates) are stored in radians internally but written in degrees (factor rad -> deg). */
+    private static final double R2D = 180.0 / Math.PI;
+    private static final Map<String, Double> DEG = Map.of("wheelAngles", R2D);
+
     /** Field name -> "description [unit]". */
     static final Map<String, String> DOC = new LinkedHashMap<>();
     static {
@@ -32,7 +36,7 @@ public final class RobotSpecsYaml {
         DOC.put("accBrakeAngularMax", "Maximum angular deceleration when braking [rad/s^2]");
         DOC.put("velAbsoluteMax", "Maximum translational speed [m/s]");
         DOC.put("velAngularMax", "Maximum yaw rate [rad/s]");
-        DOC.put("wheelAngles", "Wheel positions, counter-clockwise from the robot front: front right, back right, back left, front left [rad]");
+        DOC.put("wheelAngles", "Wheel positions, counter-clockwise from the robot front: front right, back right, back left, front left [deg]");
         DOC.put("wheelMountRadius", "Distance of the wheel contact points from the robot centre [m]");
         DOC.put("wheelRadius", "Wheel radius [m]");
         DOC.put("gearRatio", "Motor-to-wheel gear ratio [-]");
@@ -76,11 +80,11 @@ public final class RobotSpecsYaml {
     public static String toYaml(RobotSpecs specs) {
         return ParamsYaml.toYaml(specs, DOC, EXCLUDED,
                 "# Robot parameters of the simulator (loaded after config.json; entries may be deleted to use the defaults).\n"
-                + "# Units are SI unless stated; angles in rad (deg where the name says so).\n");
+                + "# Units are SI unless stated; plain angles in degrees (converted to radians when loaded), angular rates and accelerations in rad/s and rad/s^2.\n", DEG);
     }
 
     /** Parses YAML and applies the entries present on top of {@code target}; unknown keys are an error. */
     public static void apply(String yaml, RobotSpecs target) {
-        ParamsYaml.apply(yaml, target, RobotSpecs.class, "robot specs");
+        ParamsYaml.apply(yaml, target, RobotSpecs.class, "robot specs", DEG);
     }
 }
