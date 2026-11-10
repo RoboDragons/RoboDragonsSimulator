@@ -31,6 +31,8 @@ class RobotSpecsYamlTest {
         assertEquals(d.dribblerMaterial, s.dribblerMaterial);
         assertArrayEquals(d.wheelAngles, s.wheelAngles, 1e-12);
         assertEquals(d.erVelocityTimeConstant, s.erVelocityTimeConstant, 1e-15);
+        assertTrue(y.contains("velAngularMax: 10.0"), "angular rates stay in rad/s");
+        assertTrue(y.contains("[-60.0, -135.0, 135.0, 60.0]"), "wheel angles in degrees");
         assertEquals(0.5, s.rotationError); // not part of the file
     }
 
