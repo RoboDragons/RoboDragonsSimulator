@@ -85,6 +85,11 @@ public final class Main {
                 text -> ssl.sim.core.RobotSpecsYaml.apply(text, cfg0.robot));
         loadParamFile(args, "--ball-params", "ball_params.yaml", ssl.sim.core.BallParamsYaml.defaultYaml(),
                 text -> ssl.sim.core.BallParamsYaml.apply(text, cfg0.ball));
+        loadParamFile(args, "--field-params", "field_params.yaml", ssl.sim.core.FieldParamsYaml.defaultYaml(cfg0.divisionEnum()), text -> {
+            ssl.sim.core.FieldParams p = ssl.sim.core.FieldParams.defaultsFor(cfg0.divisionEnum());
+            ssl.sim.core.FieldParamsYaml.apply(text, p);
+            cfg0.fieldParams = p;
+        });
         loadParamFile(args, "--camera-params", "camera_params.yaml", ssl.sim.core.CameraParamsYaml.defaultYaml(cfg0.field()),
                 text -> ssl.sim.core.CameraParamsYaml.apply(text, cfg0.cameras));
         boolean headless = false, noNet = false, demo = false;
@@ -94,7 +99,12 @@ public final class Main {
         SslNetwork.Config net = cfg.network;
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
-                case "--config", "--robot-specs", "--ball-params", "--camera-params" -> i++;
+                case "--config", "--robot-specs", "--ball-params", "--camera-params", "--field-params" -> i++;
+                case "--write-default-field-params" -> {
+                    java.nio.file.Files.writeString(Path.of(args[++i]), ssl.sim.core.FieldParamsYaml.defaultYaml(cfg.divisionEnum()));
+                    System.out.println("Default field params written to " + args[i]);
+                    return;
+                }
                 case "--write-default-camera-params" -> {
                     java.nio.file.Files.writeString(Path.of(args[++i]), ssl.sim.core.CameraParamsYaml.defaultYaml(cfg.field()));
                     System.out.println("Default camera params written to " + args[i]);
@@ -117,6 +127,7 @@ public final class Main {
                 }
                 case "--division" -> {
                     cfg.division = args[++i];
+                    cfg.fieldParams = null; // defaults of that division
                     cfg.cameras.positions = null; // explicit camera positions belong to one field size: use the automatic layout
                 }
                 case "--headless" -> headless = true;
@@ -161,12 +172,14 @@ public final class Main {
                               --write-default-config F  write a complete default config file and exit
                               --robot-specs FILE        robot parameters + ball contact materials (YAML, default ./robot_specs.yaml, created if missing)
                               --ball-params FILE        ball parameters (YAML, default ./ball_params.yaml, created if missing)
+                              --field-params FILE       field dimensions, margins, goal side walls (YAML, default ./field_params.yaml, created if missing)
+                              --write-default-field-params F  write the field parameter file of the selected division and exit
                               --camera-params FILE      camera parameters and positions (YAML, default ./camera_params.yaml, created if missing)
                               --write-default-camera-params F  write the default camera parameter file and exit
-                              (--division, --cameras and --camera-height select the automatic camera layout instead of camera_params.yaml positions)
+                              (--division selects the division defaults instead of field_params.yaml; --division, --cameras and --camera-height select the automatic camera layout instead of camera_params.yaml positions)
                               --write-default-ball-params F  write the default ball parameter file and exit
                               --write-default-robot-specs F  write the default robot parameter file and exit
-                              --division A|B           field size (A: 12x9 m, B: 9x6 m; default B)
+                              --division A|B            field size (A: 12x9 m, B: 9x6 m; default A)
                               --robots N                robots per team (default: rule maximum of the division)
                               --realism NAME            ER-Force realism preset: None, Friendly, RC2021, Realistic (default Realistic)
                               --cameras N               number of cameras (default: A=2, B=1)

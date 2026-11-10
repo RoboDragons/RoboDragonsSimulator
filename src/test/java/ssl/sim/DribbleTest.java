@@ -123,7 +123,7 @@ class DribbleTest {
         Ball.Params bp = new Ball.Params();
         bp.muWall = muWall;
         World w = new World(new FieldGeometry(FieldGeometry.Division.A), bp);
-        double wallX = w.field().halfLength() + w.field().boundaryWidth;
+        double wallX = w.field().halfLength() + w.field().boundaryGoalLine;
         RobotSpecs s = TestSpecs.motor();
         s.accSpeedupAbsoluteMax = 1.0;
         s.accBrakeAbsoluteMax = 1.0;

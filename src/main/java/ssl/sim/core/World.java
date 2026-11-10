@@ -148,7 +148,7 @@ public class World {
 
     /** Last-resort guard: nothing can ever leave the outer boundary, whatever the contact forces do. */
     private void enforceBounds() {
-        double mx = field.halfLength() + field.boundaryWidth, my = field.halfWidth() + field.boundaryWidth;
+        double mx = field.halfLength() + field.boundaryGoalLine, my = field.halfWidth() + field.boundaryTouchLine;
         for (Robot r : robots) {
             double x = Math.max(-mx, Math.min(mx, r.x())), y = Math.max(-my, Math.min(my, r.y()));
             if (x != r.x() || y != r.y()) {

@@ -129,3 +129,13 @@ parameters (image size, focal length, default height, overlap) and a `positions`
 configured division). Edit or add entries to place the cameras freely; delete `positions` for the automatic layout
 (`--cameras N`). The options `--division`, `--cameras` and `--camera-height` ignore the positions in the file.
 Noise, drop-outs, latency and capture rate stay in the realism preset. `--write-default-camera-params FILE` writes a fresh copy.
+
+## field_params.yaml (field)
+
+`field_params.yaml` (or `--field-params FILE`) is created on first start with commented values (length, width, goal,
+defense area, margins, wall sizes) of the configured division; the default division is now **A**. It follows the 2026
+rules for Division A: the margin is 0.3 m along the touch lines and **0.6 m behind the goal lines** (the extra 0.3 m is the
+Goal Substitution Area) and the **goal side walls continue to the outer wall** (`goalSideWallsToBoundary`), which
+partitions the area behind each goal. Division B keeps 0.3 m on all sides and no partitions. `--division` selects the defaults of
+that division and ignores the file; `--write-default-field-params FILE` writes a fresh copy. Cameras and the vision
+geometry use the margins (the camera layout covers the whole area up to the outer wall).
