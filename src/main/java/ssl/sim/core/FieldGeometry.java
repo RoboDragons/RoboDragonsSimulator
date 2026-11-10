@@ -6,41 +6,58 @@ import ssl.sim.physics.ConvexPolygon;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Field dimensions from the RoboCup SSL rules (all lengths in metres). Blue defends -x, yellow +x by default. */
+/** Field dimensions (all lengths in metres, see {@link FieldParams}). Blue defends -x, yellow +x by default. */
 public final class FieldGeometry {
     public enum Division {
-        A(12.0, 9.0, 1.8, 1.8, 3.6, 11),
-        B(9.0, 6.0, 1.0, 1.0, 2.0, 8);
+        A(11), B(8);
 
-        final double length, width, goalWidth, penaltyDepth, penaltyWidth;
         public final int maxRobots;
 
-        Division(double l, double w, double gw, double pd, double pw, int robots) {
-            length = l;
-            width = w;
-            goalWidth = gw;
-            penaltyDepth = pd;
-            penaltyWidth = pw;
-            maxRobots = robots;
-        }
+        Division(int robots) { maxRobots = robots; }
     }
 
     public final Division division;
-    public final double length, width, goalWidth, goalDepth = 0.18, boundaryWidth = 0.3;
-    public final double penaltyDepth, penaltyWidth, centerCircleRadius = 0.5, lineThickness = 0.01;
-    public final double wallThickness = 0.02, wallHeight = 0.16;
+    public final double length, width, goalWidth, goalDepth;
+    /** Margin to the outer wall along the touch lines (y direction) and behind the goal lines (x direction). */
+    public final double boundaryTouchLine, boundaryGoalLine;
+    public final boolean goalSideWallsToBoundary;
+    public final double penaltyDepth, penaltyWidth, centerCircleRadius, lineThickness;
+    public final double wallThickness, wallHeight;
     private final List<ConvexPolygon> walls = new ArrayList<>();
     private final List<ConvexPolygon> collisionWalls = new ArrayList<>();
 
-    public FieldGeometry(Division d) { this(d, d.length, d.width, d.goalWidth, d.penaltyDepth, d.penaltyWidth); }
+    public FieldGeometry(Division d) { this(d, FieldParams.defaultsFor(d)); }
 
+    /** Division defaults with the main dimensions replaced (used by the simulation protocol). */
     public FieldGeometry(Division d, double length, double width, double goalWidth, double penaltyDepth, double penaltyWidth) {
+        this(d, withMainDimensions(d, length, width, goalWidth, penaltyDepth, penaltyWidth));
+    }
+
+    private static FieldParams withMainDimensions(Division d, double l, double w, double gw, double pd, double pw) {
+        FieldParams p = FieldParams.defaultsFor(d);
+        p.length = l;
+        p.width = w;
+        p.goalWidth = gw;
+        p.penaltyDepth = pd;
+        p.penaltyWidth = pw;
+        return p;
+    }
+
+    public FieldGeometry(Division d, FieldParams p) {
         this.division = d;
-        this.length = length;
-        this.width = width;
-        this.goalWidth = goalWidth;
-        this.penaltyDepth = penaltyDepth;
-        this.penaltyWidth = penaltyWidth;
+        this.length = p.length;
+        this.width = p.width;
+        this.goalWidth = p.goalWidth;
+        this.goalDepth = p.goalDepth;
+        this.boundaryTouchLine = p.boundaryTouchLine;
+        this.boundaryGoalLine = p.boundaryGoalLine;
+        this.goalSideWallsToBoundary = p.goalSideWallsToBoundary;
+        this.penaltyDepth = p.penaltyDepth;
+        this.penaltyWidth = p.penaltyWidth;
+        this.centerCircleRadius = p.centerCircleRadius;
+        this.lineThickness = p.lineThickness;
+        this.wallThickness = p.wallThickness;
+        this.wallHeight = p.wallHeight;
         buildWalls();
     }
 
@@ -57,21 +74,25 @@ public final class FieldGeometry {
      */
     public List<ConvexPolygon> collisionWalls() { return collisionWalls; }
 
+    /** Length of the goal side walls along x, starting at the goal line: the goal depth, or up to the outer wall. */
+    private double goalSideWallLength() { return goalSideWallsToBoundary ? Math.max(goalDepth, boundaryGoalLine) : goalDepth; }
+
     private void buildWalls() {
         buildCollisionWalls();
-        double hl = halfLength(), hw = halfWidth(), b = boundaryWidth, t = wallThickness;
+        double hl = halfLength(), hw = halfWidth(), bx = boundaryGoalLine, by = boundaryTouchLine, t = wallThickness;
         // outer boundary walls
-        walls.add(ConvexPolygon.box(0, hw + b + t / 2, hl + b + t, t / 2));
-        walls.add(ConvexPolygon.box(0, -hw - b - t / 2, hl + b + t, t / 2));
-        walls.add(ConvexPolygon.box(hl + b + t / 2, 0, t / 2, hw + b));
-        walls.add(ConvexPolygon.box(-hl - b - t / 2, 0, t / 2, hw + b));
+        walls.add(ConvexPolygon.box(0, hw + by + t / 2, hl + bx + t, t / 2));
+        walls.add(ConvexPolygon.box(0, -hw - by - t / 2, hl + bx + t, t / 2));
+        walls.add(ConvexPolygon.box(hl + bx + t / 2, 0, t / 2, hw + by));
+        walls.add(ConvexPolygon.box(-hl - bx - t / 2, 0, t / 2, hw + by));
         // goals (back + two sides), on both ends
+        double sideLen = goalSideWallLength();
         for (int s = -1; s <= 1; s += 2) {
             double xBack = s * (hl + goalDepth + t / 2);
             walls.add(ConvexPolygon.box(xBack, 0, t / 2, goalWidth / 2 + t));
-            double xMid = s * (hl + goalDepth / 2);
-            walls.add(ConvexPolygon.box(xMid, goalWidth / 2 + t / 2, goalDepth / 2, t / 2));
-            walls.add(ConvexPolygon.box(xMid, -goalWidth / 2 - t / 2, goalDepth / 2, t / 2));
+            double xMid = s * (hl + sideLen / 2);
+            walls.add(ConvexPolygon.box(xMid, goalWidth / 2 + t / 2, sideLen / 2, t / 2));
+            walls.add(ConvexPolygon.box(xMid, -goalWidth / 2 - t / 2, sideLen / 2, t / 2));
         }
     }
 
@@ -93,18 +114,19 @@ public final class FieldGeometry {
     }
 
     private void buildCollisionWalls() {
-        double hl = halfLength(), hw = halfWidth(), b = boundaryWidth, big = 1.0;
-        // outer boundary: inner face at +-(half + b), 1 m thick outwards
-        collisionWalls.add(ConvexPolygon.box(0, hw + b + big / 2, hl + b + big, big / 2));
-        collisionWalls.add(ConvexPolygon.box(0, -hw - b - big / 2, hl + b + big, big / 2));
-        collisionWalls.add(ConvexPolygon.box(hl + b + big / 2, 0, big / 2, hw + b + big));
-        collisionWalls.add(ConvexPolygon.box(-hl - b - big / 2, 0, big / 2, hw + b + big));
+        double hl = halfLength(), hw = halfWidth(), bx = boundaryGoalLine, by = boundaryTouchLine, big = 1.0;
+        // outer boundary: inner face at +-(half + margin), 1 m thick outwards
+        collisionWalls.add(ConvexPolygon.box(0, hw + by + big / 2, hl + bx + big, big / 2));
+        collisionWalls.add(ConvexPolygon.box(0, -hw - by - big / 2, hl + bx + big, big / 2));
+        collisionWalls.add(ConvexPolygon.box(hl + bx + big / 2, 0, big / 2, hw + by + big));
+        collisionWalls.add(ConvexPolygon.box(-hl - bx - big / 2, 0, big / 2, hw + by + big));
         double th = 0.1; // goal walls: inner faces as in the visible model, extended outwards
+        double sideLen = goalSideWallLength();
         for (int s = -1; s <= 1; s += 2) {
             collisionWalls.add(ConvexPolygon.box(s * (hl + goalDepth + th / 2), 0, th / 2, goalWidth / 2 + th));
-            double xMid = s * (hl + goalDepth / 2);
-            collisionWalls.add(ConvexPolygon.box(xMid, goalWidth / 2 + th / 2, goalDepth / 2, th / 2));
-            collisionWalls.add(ConvexPolygon.box(xMid, -goalWidth / 2 - th / 2, goalDepth / 2, th / 2));
+            double xMid = s * (hl + sideLen / 2);
+            collisionWalls.add(ConvexPolygon.box(xMid, goalWidth / 2 + th / 2, sideLen / 2, th / 2));
+            collisionWalls.add(ConvexPolygon.box(xMid, -goalWidth / 2 - th / 2, sideLen / 2, th / 2));
         }
     }
 }

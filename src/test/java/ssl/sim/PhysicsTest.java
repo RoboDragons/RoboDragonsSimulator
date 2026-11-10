@@ -111,7 +111,8 @@ class PhysicsTest {
         World w = newWorld();
         w.ball().teleport(new Vector3D(0, 0, 0.0215), new Vector3D(6.5, 2, 0), true);
         w.advance(8.0);
-        assertTrue(Math.abs(w.ball().x()) < 6.4 && Math.abs(w.ball().y()) < 4.9);
+        FieldGeometry f = w.field();
+        assertTrue(Math.abs(w.ball().x()) < f.halfLength() + f.boundaryGoalLine && Math.abs(w.ball().y()) < f.halfWidth() + f.boundaryTouchLine);
     }
 
     @Test
@@ -125,10 +126,10 @@ class PhysicsTest {
             r.applyCommand(new RobotCommand(new RobotCommand.GlobalVelocity(d[0] * 3.5, d[1] * 3.5, d[2]), 0, 0, 0));
             for (int i = 0; i < 12000; i++) {
                 w.step(World.PHYSICS_DT);
-                assertTrue(Math.abs(r.x()) < f.halfLength() + f.boundaryWidth + 0.02
+                assertTrue(Math.abs(r.x()) < f.halfLength() + f.boundaryGoalLine + 0.02
                                 || Math.abs(r.y()) < f.goalWidth / 2 && Math.abs(r.x()) < f.halfLength() + f.goalDepth + 0.02,
                         "robot escaped in x: " + r.position() + " dir " + java.util.Arrays.toString(d));
-                assertTrue(Math.abs(r.y()) < f.halfWidth() + f.boundaryWidth + 0.02,
+                assertTrue(Math.abs(r.y()) < f.halfWidth() + f.boundaryTouchLine + 0.02,
                         "robot escaped in y: " + r.position() + " dir " + java.util.Arrays.toString(d));
             }
         }

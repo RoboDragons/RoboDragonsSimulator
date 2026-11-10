@@ -15,7 +15,9 @@ class ConfigTest {
         Simulator sa = new Simulator(a);
         assertEquals(2, sa.vision().cameras().size());
         assertEquals(6.0, sa.vision().cameras().get(0).position().getZ(), 1e-9);
-        Simulator sb = new Simulator(new SimConfig());
+        SimConfig b = new SimConfig();
+        b.division = "B";
+        Simulator sb = new Simulator(b);
         assertEquals(1, sb.vision().cameras().size());
         assertEquals(6.0, sb.vision().cameras().get(0).position().getZ(), 1e-9);
     }

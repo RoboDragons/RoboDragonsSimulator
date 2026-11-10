@@ -18,8 +18,8 @@ import java.nio.file.Path;
  * file only needs the entries that differ. Generate a complete file with {@code --write-default-config}.
  */
 public class SimConfig {
-    /** "A" or "B" (RoboCup SSL division, selects the field size). */
-    public String division = "B";
+    /** "A" or "B" (RoboCup SSL division, selects the field size and its default parameters). */
+    public String division = "A";
     /** Robots per team at start-up; 0 = maximum for the division. */
     public int robotsPerTeam = 0;
     /**
@@ -121,7 +121,12 @@ public class SimConfig {
         return FieldGeometry.Division.valueOf(division.trim().toUpperCase());
     }
 
-    public FieldGeometry field() { return new FieldGeometry(divisionEnum()); }
+    /** Field parameters (YAML file field_params.yaml); null = defaults of the division. */
+    public FieldParams fieldParams = null;
+
+    public FieldGeometry field() {
+        return fieldParams != null ? new FieldGeometry(divisionEnum(), fieldParams) : new FieldGeometry(divisionEnum());
+    }
 
     public static SimConfig load(Path file) throws IOException {
         return fromJson(Files.readString(file, StandardCharsets.UTF_8));

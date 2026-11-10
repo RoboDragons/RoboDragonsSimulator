@@ -27,7 +27,7 @@ public class VisionSystem {
     public static VisionSystem forField(FieldGeometry f, SimConfig.CameraConfig cfg) {
         VisionSystem vs = new VisionSystem(cfg.frequencyHz);
         List<SimConfig.CameraPose> poses = cfg.positions != null && !cfg.positions.isEmpty() ? cfg.positions : autoLayout(f, cfg);
-        double totalX = f.length + 2 * f.boundaryWidth, totalY = f.width + 2 * f.boundaryWidth;
+        double totalX = f.length + 2 * f.boundaryGoalLine, totalY = f.width + 2 * f.boundaryTouchLine;
         double defaultHalfX = totalX / poses.size() / 2;
         for (int i = 0; i < poses.size(); i++) {
             SimConfig.CameraPose p = poses.get(i);
@@ -56,7 +56,7 @@ public class VisionSystem {
     /** Automatic placement: {@code count} cameras tiled along the field length above the centre line, each over an equal strip. */
     public static List<SimConfig.CameraPose> autoLayout(FieldGeometry f, SimConfig.CameraConfig cfg) {
         int n = cfg.effectiveCount(f.division);
-        double totalX = f.length + 2 * f.boundaryWidth, totalY = f.width + 2 * f.boundaryWidth;
+        double totalX = f.length + 2 * f.boundaryGoalLine, totalY = f.width + 2 * f.boundaryTouchLine;
         double strip = totalX / n;
         List<SimConfig.CameraPose> out = new ArrayList<>();
         for (int i = 0; i < n; i++)

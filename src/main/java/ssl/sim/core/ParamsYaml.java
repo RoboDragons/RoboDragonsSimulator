@@ -64,7 +64,7 @@ final class ParamsYaml {
 
     /** Plain decimal notation (YAML 1.1 does not read "1.0E7" as a number). */
     private static String num(double d) {
-        String s = new BigDecimal(Double.toString(d)).stripTrailingZeros().toPlainString();
+        String s = new BigDecimal(Double.toString(d)).round(new java.math.MathContext(15)).stripTrailingZeros().toPlainString();
         return s.contains(".") ? s : s + ".0";
     }
 

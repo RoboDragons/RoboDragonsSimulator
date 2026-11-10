@@ -57,7 +57,7 @@ public final class ProtoConvert {
     public static VisionWrapper.Packet geometryPacket(FieldGeometry f, VisionSystem vs, Ball.Params ballParams) {
         VisionGeometry.FieldSize.Builder fs = VisionGeometry.FieldSize.newBuilder()
                 .setFieldLength(mm(f.length)).setFieldWidth(mm(f.width)).setGoalWidth(mm(f.goalWidth))
-                .setGoalDepth(mm(f.goalDepth)).setBoundaryWidth(mm(f.boundaryWidth))
+                .setGoalDepth(mm(f.goalDepth)).setBoundaryWidth(mm(f.boundaryTouchLine))
                 .setPenaltyAreaDepth(mm(f.penaltyDepth)).setPenaltyAreaWidth(mm(f.penaltyWidth));
         double hl = f.halfLength(), hw = f.halfWidth(), pd = f.penaltyDepth, pw = f.penaltyWidth / 2;
         line(fs, "TopTouchLine", -hl, hw, hl, hw, VisionGeometry.FieldShapeType.TopTouchLine, f);

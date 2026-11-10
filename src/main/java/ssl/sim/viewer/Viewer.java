@@ -429,9 +429,9 @@ public class Viewer {
     }
 
     private void drawField(FieldGeometry f) {
-        double hl = f.halfLength(), hw = f.halfWidth(), b = f.boundaryWidth;
-        draw(cube, Mat4.mul(Mat4.translate(0, 0, -0.023), Mat4.scale(f.length + 2 * b + 2, f.width + 2 * b + 2, 0.02)), 0.10f, 0.12f, 0.12f);
-        draw(cube, Mat4.mul(Mat4.translate(0, 0, -0.005), Mat4.scale(f.length + 2 * b, f.width + 2 * b, 0.01)), 0.10f, 0.42f, 0.16f);
+        double hl = f.halfLength(), hw = f.halfWidth(), bx = f.boundaryGoalLine, by = f.boundaryTouchLine;
+        draw(cube, Mat4.mul(Mat4.translate(0, 0, -0.023), Mat4.scale(f.length + 2 * bx + 2, f.width + 2 * by + 2, 0.02)), 0.10f, 0.12f, 0.12f);
+        draw(cube, Mat4.mul(Mat4.translate(0, 0, -0.005), Mat4.scale(f.length + 2 * bx, f.width + 2 * by, 0.01)), 0.10f, 0.42f, 0.16f);
         float[] white = {0.95f, 0.95f, 0.95f};
         double t = f.lineThickness, z = 0.0008;
         line(-hl, hw, hl, hw, t, z, white);
