@@ -71,6 +71,12 @@ public class Viewer {
     private boolean kickRequest, chipRequest;
     private boolean showCameras = true;
     private int width = 1280, height = 720;
+    /** MSAA sample count requested from the window system (the driver may pick the nearest supported value). */
+    private static final int MSAA_SAMPLES = 8;
+    private static final double FOV_Y = Math.toRadians(50);
+    /** Field lines are drawn at least this many pixels wide so that they do not vanish at a distance or at grazing angles. */
+    private static final double MIN_LINE_PIXELS = 1.6;
+    private double camX, camY, camZ;
 
     private String screenshotPath;
     private int screenshotAfterFrames = 90, screenshotFrameCount;
@@ -140,6 +146,75 @@ public class Viewer {
 
     // ------------------------------------------------------------------ init
 
+    /** Window / task bar icon from the PNGs in resources (a robot screenshot); ignored where the platform has no window icons. */
+    private void setWindowIcon() {
+        int[] sizes = {16, 32, 48, 64, 128, 256};
+        java.util.List<java.nio.ByteBuffer> pixels = new java.util.ArrayList<>();
+        org.lwjgl.glfw.GLFWImage.Buffer icons = org.lwjgl.glfw.GLFWImage.malloc(sizes.length);
+        try {
+            int n = 0;
+            for (int size : sizes) {
+                try (java.io.InputStream in = Viewer.class.getResourceAsStream("/ssl/sim/icon/icon-" + size + ".png")) {
+                    if (in == null) continue;
+                    java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(in);
+                    java.nio.ByteBuffer buf = org.lwjgl.BufferUtils.createByteBuffer(img.getWidth() * img.getHeight() * 4);
+                    for (int y = 0; y < img.getHeight(); y++)
+                        for (int x = 0; x < img.getWidth(); x++) {
+                            int argb = img.getRGB(x, y);
+                            buf.put((byte) (argb >> 16)).put((byte) (argb >> 8)).put((byte) argb).put((byte) (argb >>> 24));
+                        }
+                    buf.flip();
+                    pixels.add(buf);
+                    icons.get(n++).set(img.getWidth(), img.getHeight(), buf);
+                }
+            }
+            if (n > 0) glfwSetWindowIcon(window, icons.limit(n));
+        } catch (java.io.IOException | RuntimeException e) {
+            System.err.println("[viewer] cannot set the window icon: " + e);
+        } finally {
+            icons.free();
+        }
+    }
+
+    /**
+     * Zooms by {@code factor} (distance multiplier) keeping the ground point under the mouse cursor fixed on screen, by
+     * moving the look-at target. Without a ground point under the cursor (above the horizon) the target stays.
+     */
+    private void zoomAtCursor(double factor) {
+        double[] cur = new double[1], curY = new double[1];
+        glfwGetCursorPos(window, cur, curY);
+        double[] before = groundPointAt(cur[0], curY[0]);
+        dist = Math.max(0.5, Math.min(40, dist * factor));
+        double[] after = groundPointAt(cur[0], curY[0]);
+        if (before != null && after != null) {
+            targetX += before[0] - after[0];
+            targetY += before[1] - after[1];
+        }
+    }
+
+    /** Ground (z = 0) point under the window position (mx, my) for the current camera, or null if the ray misses it. */
+    private double[] groundPointAt(double mx, double my) {
+        int[] ww = new int[1], wh = new int[1];
+        glfwGetWindowSize(window, ww, wh);
+        if (ww[0] <= 0 || wh[0] <= 0) return null;
+        double ex = targetX + dist * Math.cos(pitch) * Math.cos(yaw), ey = targetY + dist * Math.cos(pitch) * Math.sin(yaw);
+        double ez = dist * Math.sin(pitch);
+        // camera basis: forward towards the target, right = forward x up, up' = right x forward
+        double fx = targetX - ex, fy = targetY - ey, fz = -ez, fl = Math.sqrt(fx * fx + fy * fy + fz * fz);
+        fx /= fl; fy /= fl; fz /= fl;
+        double rx = fy, ry = -fx, rz = 0, rl = Math.hypot(rx, ry); // forward x (0,0,1)
+        rx /= rl; ry /= rl;
+        double ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
+        double th = Math.tan(FOV_Y / 2), aspect = (double) ww[0] / wh[0];
+        double nx = 2 * mx / ww[0] - 1, ny = 1 - 2 * my / wh[0];
+        double dx = fx + rx * nx * th * aspect + ux * ny * th;
+        double dy = fy + ry * nx * th * aspect + uy * ny * th;
+        double dz = fz + rz * nx * th * aspect + uz * ny * th;
+        if (dz >= -1e-9) return null;
+        double t = -ez / dz;
+        return new double[]{ex + t * dx, ey + t * dy};
+    }
+
     private void init() {
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit()) throw new IllegalStateException("Unable to initialise GLFW");
@@ -148,8 +223,10 @@ public class Viewer {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        glfwWindowHint(GLFW_SAMPLES, MSAA_SAMPLES); // multisample anti-aliasing of edges and field lines
         window = glfwCreateWindow(width, height, "RoboDragons SSL Simulator", NULL, NULL);
         if (window == NULL) throw new IllegalStateException("Failed to create the window (OpenGL 3.3 required)");
+        setWindowIcon();
         GLFWVidMode vm = glfwGetVideoMode(glfwGetPrimaryMonitor());
         if (vm != null) glfwSetWindowPos(window, (vm.width() - width) / 2, (vm.height() - height) / 2);
         glfwMakeContextCurrent(window);
@@ -161,7 +238,7 @@ public class Viewer {
             height = Math.max(1, hh);
             glViewport(0, 0, width, height);
         });
-        glfwSetScrollCallback(window, (w, dx, dy) -> dist = Math.max(0.5, Math.min(40, dist * Math.pow(0.9, dy))));
+        glfwSetScrollCallback(window, (w, dx, dy) -> zoomAtCursor(Math.pow(0.9, dy)));
         glfwSetMouseButtonCallback(window, (w, button, action, mods) -> {
             boolean down = action == GLFW_PRESS;
             if (button == GLFW_MOUSE_BUTTON_LEFT) dragL = down;
@@ -203,6 +280,7 @@ public class Viewer {
         cylinder = Mesh.cylinder(20);
         sphere = Mesh.sphere(8, 12);
         glEnable(GL_DEPTH_TEST);
+        glEnable(org.lwjgl.opengl.GL13.GL_MULTISAMPLE);
         glClearColor(0.12f, 0.14f, 0.17f, 1f);
     }
 
@@ -390,8 +468,11 @@ public class Viewer {
         glUseProgram(program);
         double cx = targetX + dist * Math.cos(pitch) * Math.cos(yaw), cy = targetY + dist * Math.cos(pitch) * Math.sin(yaw);
         double cz = dist * Math.sin(pitch);
+        camX = cx;
+        camY = cy;
+        camZ = cz;
         float[] view = Mat4.lookAt(cx, cy, cz, targetX, targetY, 0, 0, 0, 1);
-        float[] proj = Mat4.perspective(Math.toRadians(50), (double) width / height, 0.05, 200);
+        float[] proj = Mat4.perspective(FOV_Y, (double) width / height, 0.1, 200);
         glUniformMatrix4fv(uViewProj, false, Mat4.mul(proj, view));
         glUniform3f(uLight, 0.4f, -0.3f, 1.0f);
 
@@ -414,6 +495,15 @@ public class Viewer {
             case 1 -> { yaw = -Math.PI / 2; pitch = 1.5; dist = f.length * 0.95; targetX = 0; targetY = 0; }
             case 2 -> { yaw = -Math.PI / 2; pitch = 0.8; dist = f.length * 0.9; targetX = 0; targetY = 0; }
             case 3 -> { yaw = -Math.PI / 2; pitch = 0.25; dist = f.length * 0.9; targetX = 0; targetY = 0; }
+            case 5 -> { // close-up from above-front, e.g. for the application icon
+                for (RobotView rv : robots) if (rv.team() == selTeam && rv.id() == selId) {
+                    targetX = rv.x() + 0.02 * Math.cos(rv.theta());
+                    targetY = rv.y() + 0.02 * Math.sin(rv.theta());
+                    yaw = rv.theta() + 0.6;
+                    pitch = 0.75;
+                    dist = 0.62;
+                }
+            }
             case 4 -> {
                 for (RobotView rv : robots) if (rv.team() == selTeam && rv.id() == selId) {
                     targetX = rv.x();
@@ -473,7 +563,24 @@ public class Viewer {
 
     private void line(double x1, double y1, double x2, double y2, double thick, double z, float[] c) {
         double cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, len = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
-        draw(cube, Mat4.mul(Mat4.mul(Mat4.translate(cx, cy, z), Mat4.rotZ(ang)), Mat4.scale(len + thick * 0.5, thick, 0.0016)), c[0], c[1], c[2]);
+        double w = Math.max(thick, minLineWidth(cx, cy, z, Math.cos(ang), Math.sin(ang)));
+        draw(cube, Mat4.mul(Mat4.mul(Mat4.translate(cx, cy, z), Mat4.rotZ(ang)), Mat4.scale(len + w * 0.5, w, 0.0016)), c[0], c[1], c[2]);
+    }
+
+    /**
+     * World width of a ground line (direction dx, dy) at (x, y, z) that projects to at least {@link #MIN_LINE_PIXELS}
+     * pixels. The line width is foreshortened by the viewing elevation (sin) for the part of its normal that points along
+     * the view direction, so lines running across the view need to be wider at grazing angles than lines running along it.
+     */
+    private double minLineWidth(double x, double y, double z, double dx, double dy) {
+        double rx = x - camX, ry = y - camY, rz = z - camZ;
+        double d = Math.sqrt(rx * rx + ry * ry + rz * rz), horiz = Math.hypot(rx, ry);
+        double pixel = 2 * d * Math.tan(FOV_Y / 2) / height; // world size of one pixel at that distance
+        double s = Math.max(0.05, -rz / d); // sin of the viewing elevation
+        double vx = horiz > 1e-9 ? rx / horiz : 1, vy = horiz > 1e-9 ? ry / horiz : 0;
+        double nv = -dy * vx + dx * vy; // component of the line normal along the horizontal view direction
+        double f = Math.sqrt(1 - nv * nv + nv * nv * s * s); // projected-width factor of the normal
+        return MIN_LINE_PIXELS * pixel / Math.max(0.05, f);
     }
 
     /** SSL-Vision style marker pattern bits for ids 0..15 (4 corner dots: pink = 1, green = 0). */

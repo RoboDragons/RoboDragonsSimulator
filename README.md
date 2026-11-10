@@ -139,3 +139,9 @@ Goal Substitution Area) and the **goal side walls continue to the outer wall** (
 partitions the area behind each goal. Division B keeps 0.3 m on all sides and no partitions. `--division` selects the defaults of
 that division and ignores the file; `--write-default-field-params FILE` writes a fresh copy. Cameras and the vision
 geometry use the margins (the camera layout covers the whole area up to the outer wall).
+
+## Application icon
+
+The viewer window icon is a screenshot of a blue robot (`src/main/resources/ssl/sim/icon/`: `icon-16..256.png`, `icon-512.png`
+and a Windows `icon.ico`, e.g. for a shortcut). A new close-up can be taken with
+`--robot-view --screenshot FILE` (camera preset 5) and cropped to a square.

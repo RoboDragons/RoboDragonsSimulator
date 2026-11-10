@@ -92,7 +92,7 @@ public final class Main {
         });
         loadParamFile(args, "--camera-params", "camera_params.yaml", ssl.sim.core.CameraParamsYaml.defaultYaml(cfg0.field()),
                 text -> ssl.sim.core.CameraParamsYaml.apply(text, cfg0.cameras));
-        boolean headless = false, noNet = false, demo = false;
+        boolean headless = false, noNet = false, demo = false, robotView = false;
         String telemetryDir = null;
         String shot = null;
         int robots = -1;
@@ -146,6 +146,7 @@ public final class Main {
                 }
                 case "--no-net" -> noNet = true;
                 case "--demo" -> demo = true;
+                case "--robot-view" -> robotView = true;
                 case "--telemetry" -> telemetryDir = args[++i];
                 case "--dribble-statics" -> {
                     var rs = cfg.robot;
@@ -189,6 +190,7 @@ public final class Main {
                               --no-net                  disable all UDP endpoints
                               --dribble-statics         print the static force balance of the held ball (2 and 3 point) and exit
                               --telemetry DIR           log received robot commands and robot states as CSV
+                              --robot-view                close-up of blue robot 0 (with --screenshot, e.g. for an icon)
                               --demo                    blue robot 0 picks up the ball with the dribbler, then kicks
                               --vision-ip/--vision-port, --interface <ip|name>
                               --control-port --blue-port --yellow-port --grsim-port --sync-port""");
@@ -213,7 +215,8 @@ public final class Main {
             Thread.currentThread().join();
         } else {
             var viewer = new ssl.sim.viewer.Viewer(sim);
-            if (shot != null) viewer.screenshot(shot).cameraPreset(demo ? 4 : 2);
+            if (shot != null) viewer.screenshot(shot).cameraPreset(robotView ? 5 : demo ? 4 : 2);
+            if (robotView) viewer.selectRobot(ssl.sim.robot.Robot.Team.BLUE, 0).cameraPreset(5);
             if (demo) viewer.selectRobot(ssl.sim.robot.Robot.Team.BLUE, 0).cameraPreset(4);
             viewer.run();
             sim.stop();
