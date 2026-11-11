@@ -6,8 +6,8 @@ import ssl.sim.ball.Ball;
 import ssl.sim.ball.BallContacts;
 
 /**
- * Dribbler device: a rubber-coated roller (cylinder along the robot's y axis) driven by its own motor and
- * speed controller. A positive speed spins the roller so that its front surface moves downward, which
+ * Dribbler device: a rubber-coated roller (cylinder along the robot's y axis) driven by its own DC motor at a constant
+ * voltage (the speed drops under load, the torque rises). A positive speed spins the roller so that its front surface moves downward, which
  * imparts backspin on the ball and pulls it towards the robot (the ground friction acting on the
  * backspinning ball does the rest).
  * <p>
@@ -24,7 +24,6 @@ public class Dribbler implements RobotComponent {
     public BallContacts.Material rubber;
 
     private final DCMotor motor = DCMotor.dribblerMotor();
-    private final PiController controller = new PiController(0.02, 0.4, motor.maxVoltage);
     private final RobotSpecs specs;
     private final double radius, nominalAxisX, axisZ, halfLength;
     private double slide, slideVel; // rearward retraction of the roller from its nominal position [m], [m/s]
@@ -59,7 +58,9 @@ public class Dribbler implements RobotComponent {
     @Override
     public void update(Robot robot, Ball ball, double dt) {
         double target = targetRpm * 2 * Math.PI / 60.0;
-        double volts = controller.update(target - omega, dt);
+        // plain DC motor at a constant voltage (no speed controller): V = ke * target gives the target speed unloaded; under
+        // load the speed drops and the torque rises along the motor's torque-speed line, kt (V - ke w) / R, up to the current limit
+        double volts = motor.ke * target;
         double motorTorque = motor.torque(volts, omega);
         double ballTorque = 0;
         contact = false;
@@ -84,7 +85,9 @@ public class Dribbler implements RobotComponent {
             Vector3D surfaceVel = new Vector3D(rv.getX() + slideWorld.getX(), rv.getY() + slideWorld.getY(), 0)
                     .add(axisDir.scalarMultiply(omega).crossProduct(rc));
 
-            Vector3D f = BallContacts.resolve(ball, n, depth, surfaceVel, rubber, dt);
+            // the roller surface is driven by the motor and has inertia: the ball sticks to it (rubber, high mu) and loads the motor
+            Vector3D f = BallContacts.resolve(ball, n, depth, surfaceVel, rubber, dt,
+                    axisDir.crossProduct(n).normalize(), radius * radius / (rollerInertia + motor.rotorInertia));
             if (specs.rollerDamperEnabled) {
                 // axial part goes through the slider (and its spring/damper) to the robot, lateral part directly
                 Vector2D fxy = new Vector2D(f.getX(), f.getY());

@@ -29,8 +29,9 @@ public final class RobotShape {
         hull = new ConvexPolygon(pts);
 
         double xFloor = s.notchFloorX();
-        double nh = s.notchHalfWidth;
+        double nh = s.sideCatchHalfWidth;
         ballPieces.add(hull.clip(new Vector2D(xFloor, 0), new Vector2D(-1, 0)));
+        if (nh >= r) return; // no side catches: the whole front part is open
         ConvexPolygon front = hull.clip(new Vector2D(xFloor, 0), new Vector2D(1, 0));
         ballPieces.add(front.clip(new Vector2D(0, -nh), new Vector2D(0, -1)));
         ballPieces.add(front.clip(new Vector2D(0, nh), new Vector2D(0, 1)));

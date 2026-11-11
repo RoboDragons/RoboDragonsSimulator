@@ -145,3 +145,9 @@ geometry use the margins (the camera layout covers the whole area up to the oute
 The viewer window icon is a screenshot of a blue robot (`src/main/resources/ssl/sim/icon/`: `icon-16..256.png`, `icon-512.png`
 and a Windows `icon.ico`, e.g. for a shortcut). A new close-up can be taken with
 `--robot-view --screenshot FILE` (camera preset 5) and cropped to a square.
+
+## Side catches of the dribbler
+
+`sideCatchHalfWidth` (robot_specs.yaml) is the half distance between the hull parts beside the dribbler notch that can touch the ball
+laterally (default 32.5 mm = the notch; a value >= the robot radius removes them). `src/test/java/ssl/sim/CatchStudy.java`
+(`-Dstudy=true`) sweeps it and measures the static holding force and the dynamic limits (spin, sideways step, curves). The ball contact of the catches is `sideCatchMaterial` (friction `mu`); in the model friction there makes the hold worse (see the friction study in the same file).

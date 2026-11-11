@@ -70,6 +70,11 @@ public class RobotSpecs {
     public double chipperPlateLength = 0.012;
     public double chipperTipExtension = 0.004;
     public double notchHalfWidth = 0.0325;
+    /**
+     * Half distance between the side catches: the parts of the hull on both sides of the dribbler notch whose inner faces can
+     * touch the ball laterally. Independent of the notch width used for the kicker / chipper plates; a value >= radius removes them.
+     */
+    public double sideCatchHalfWidth = 0.0325;
     // optional front-back damper of the roller (spring + damper + stroke); the roller can retract rearwards
     public boolean rollerDamperEnabled = false;
     public double rollerStroke = 0.003;
@@ -79,16 +84,26 @@ public class RobotSpecs {
     public double rollerSlideMass = 0.03;
     /** Plate stroke [m] of the kicker. */
     public double kickerStroke = 0.02;
+    /**
+     * Largest gap [m] between the kicker plate and the ball (along the kick direction) for which a kick still reaches the ball:
+     * the stroke is extended to cover the gap, so a ball that is close but not touching is kicked at the commanded speed.
+     */
+    public double kickReach = 0.01;
+
+    /** Bare metal (aluminium / steel) against the ball: dry friction of about 0.4; used by the chipper plate and the side catches. */
+    private static final BallContacts.Material METAL_ON_BALL = new BallContacts.Material(5.0e4, 0.5, 0.4);
 
     // ---- ball contact materials (stiffness [N/m], dampingRatio, friction coefficient mu) -------------
-    /** Rubber of the dribbler roller (high friction). */
+    /** Rubber roller against the ball (mu 2.0, high-grip silicone / polyurethane). */
     public BallContacts.Material dribblerMaterial = new BallContacts.Material(3.0e4, 0.8, 2.0);
-    /** Chipper plate (passive support of the held ball). */
-    public BallContacts.Material chipperMaterial = new BallContacts.Material(5.0e4, 0.5, 0.3);
+    /** Chipper plate (passive support of the held ball): bare metal like the catches, but the ball lies on a flat surface (a contact patch, not an edge), so a bit more friction. */
+    public BallContacts.Material chipperMaterial = new BallContacts.Material(5.0e4, 0.5, 0.5);
     /** Metal kicker plate: stiff, strongly damped (little rebound). */
     public BallContacts.Material kickerMaterial = new BallContacts.Material(1.0e5, 0.7, 0.4);
     /** Robot body (hull) against the ball. */
     public BallContacts.Material bodyMaterial = new BallContacts.Material(5.0e4, 0.3, 0.5);
+    /** Side catches (hull parts beside the dribbler notch) against the ball. */
+    public BallContacts.Material sideCatchMaterial = METAL_ON_BALL;
     public double kickerPlateThickness = 0.006;
     public double kickerPlateHeight = 0.008;
 
@@ -202,6 +217,7 @@ public class RobotSpecs {
         s.chipperPlateLength = chipperPlateLength;
         s.chipperTipExtension = chipperTipExtension;
         s.notchHalfWidth = notchHalfWidth;
+        s.sideCatchHalfWidth = sideCatchHalfWidth;
         s.rollerDamperEnabled = rollerDamperEnabled;
         s.rollerStroke = rollerStroke;
         s.rollerSpringK = rollerSpringK;
@@ -209,10 +225,12 @@ public class RobotSpecs {
         s.rollerDampingC = rollerDampingC;
         s.rollerSlideMass = rollerSlideMass;
         s.kickerStroke = kickerStroke;
+        s.kickReach = kickReach;
         s.dribblerMaterial = dribblerMaterial;
         s.chipperMaterial = chipperMaterial;
         s.kickerMaterial = kickerMaterial;
         s.bodyMaterial = bodyMaterial;
+        s.sideCatchMaterial = sideCatchMaterial;
         s.kickerPlateThickness = kickerPlateThickness;
         s.kickerPlateHeight = kickerPlateHeight;
         return s;

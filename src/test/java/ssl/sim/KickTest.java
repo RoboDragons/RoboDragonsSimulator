@@ -16,8 +16,9 @@ class KickTest {
         s.kickerMaterial = new ssl.sim.ball.BallContacts.Material(1.0e5, 0.7, friction);
         Robot r = w.addRobot(Robot.Team.BLUE, 0, s, -3, 0, 0);
         w.ball().teleport(new Vector3D(-2.65, 0, 0.0215), Vector3D.ZERO, false);
-        for (int i = 0; i < 150; i++) { // approach and hold
-            r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(i < 100 ? 0.4 : 0, 0, 0), 0, 0, rpm));
+        for (int i = 0; i < 250; i++) { // approach at low roller speed, then raise it slowly (a sudden spin-up of the resting ball throws it off the roller)
+            double roller = rpm == 0 || i < 100 ? Math.min(rpm, 2000) : i < 200 ? 2000 + (rpm - 2000) * (i - 99) / 100.0 : rpm;
+            r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(i < 100 ? 0.4 : 0, 0, 0), 0, 0, Math.max(roller, 0)));
             w.advance(0.01);
         }
         if (rpm == 0) { // no dribbler: place the ball at the hold position (it would be pushed away otherwise)
@@ -67,5 +68,37 @@ class KickTest {
         kick(0.4, 0, 4.0, 45, 0.5, o);
         System.out.printf("chip 4 m/s at 45 deg: max height %.2f m%n", o[3]);
         assertTrue(o[3] > 0.15);
+    }
+
+    /** Ball speed 100 ms after a 4 m/s kick of a resting ball that lies {@code gap} metres in front of the hold position (no dribbler). */
+    private static double kickFromGap(double gap, boolean chip) {
+        World w = new World(new FieldGeometry(FieldGeometry.Division.A));
+        RobotSpecs s = new RobotSpecs();
+        Robot r = w.addRobot(Robot.Team.BLUE, 0, s, -3, 0, 0);
+        var p = r.toWorld(s.holdX() + gap, 0);
+        w.ball().teleport(new Vector3D(p.getX(), p.getY(), 0.0215), Vector3D.ZERO, false);
+        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), 4.0, chip ? 45 : 0, 0));
+        for (int i = 0; i < 0.1 / 0.001; i++) {
+            r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), i == 0 ? 4.0 : 0, chip ? 45 : 0, 0));
+            w.advance(0.001);
+        }
+        return w.ball().velocity().getNorm();
+    }
+
+    @Test
+    void closeButNotTouchingBallIsStillKicked() {
+        double touching = kickFromGap(0.0, false); // ~3.6 m/s 100 ms after a 4 m/s kick (ground friction)
+        assertEquals(4.0, touching, 0.6);
+        for (double gap : new double[]{0.005, 0.009}) { // plate gaps of 6 and 10 mm (a held ball has 1 mm)
+            double v = kickFromGap(gap, false);
+            System.out.printf("gap %.0f mm: ball speed %.2f m/s (touching: %.2f)%n", gap * 1000, v, touching);
+            assertEquals(touching, v, 0.4, "gap " + gap);
+        }
+        for (double gap : new double[]{0.01}) {
+            double v = kickFromGap(gap, true);
+            System.out.printf("chip, gap %.0f mm: ball speed %.2f m/s%n", gap * 1000, v);
+            assertTrue(v > 2.0, "chip gap " + gap + " speed " + v);
+        }
+        assertTrue(kickFromGap(0.025, false) < 0.5, "beyond the stroke the ball is not hit");
     }
 }

@@ -46,11 +46,17 @@ class DribbleTest {
         assertEquals(2.0 * t.rollerNormal(), 0.4 * t.groundNormal() + 0.3 * t.chipperNormal(), 1e-9);
     }
 
+    /** Roller mu 2.0 and chipper mu 0.3: the friction values assumed by the statics (the defaults are sticking rubber and metal). */
+    private static void slipMaterials(RobotSpecs s) {
+        s.dribblerMaterial = new ssl.sim.ball.BallContacts.Material(3.0e4, 0.8, 2.0);
+        s.chipperMaterial = new ssl.sim.ball.BallContacts.Material(5.0e4, 0.5, 0.3);
+    }
+
     private static double holdAndMeasure(RobotSpecs s, boolean chipper, double[] out) {
         World w = world();
         Robot r = w.addRobot(Robot.Team.BLUE, 0, s, 0, 0, 0);
         w.ball().teleport(new Vector3D(0.35, 0, 0.0215), Vector3D.ZERO, false);
-        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 9000));
+        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 2000));
         w.advance(1.0);
         r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), 0, 0, 9000));
         w.advance(1.5);
@@ -72,6 +78,7 @@ class DribbleTest {
     @Test
     void threePointHoldMatchesStatics() {
         RobotSpecs s = TestSpecs.motor();
+        slipMaterials(s); // the statics assume a slipping roller (friction = mu N)
         double[] o = new double[4];
         double dist = holdAndMeasure(s, true, o);
         var st = DribblerStatics.threePoint(s, 2.0, 0.3, 0.4, 0.046);
@@ -87,6 +94,7 @@ class DribbleTest {
     void twoPointHoldMatchesStatics() {
         RobotSpecs s = TestSpecs.motor();
         s.chipperEnabled = false;
+        slipMaterials(s);
         double[] o = new double[4];
         double dist = holdAndMeasure(s, false, o);
         var st = DribblerStatics.twoPoint(s, 2.0, 0.4, 0.046);
@@ -107,7 +115,7 @@ class DribbleTest {
             World w = world();
             Robot r = w.addRobot(Robot.Team.BLUE, 0, s, 0, 0, 0);
             w.ball().teleport(new Vector3D(0.35, 0, 0.0215), Vector3D.ZERO, false);
-            r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 9000));
+            r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 2000));
             w.advance(1.0);
             r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), 0, 0, 9000));
             w.advance(1.0);
@@ -129,7 +137,7 @@ class DribbleTest {
         s.accBrakeAbsoluteMax = 1.0;
         Robot r = w.addRobot(Robot.Team.BLUE, 0, s, wallX - 0.6, 2.0, 0);
         w.ball().teleport(new Vector3D(wallX - 0.0216, 2.0, 0.0215), Vector3D.ZERO, false);
-        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 9000));
+        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 2000));
         for (int i = 0; i < 4000 && r.x() < wallX - s.holdX() - 0.0216 + 0.002; i++) w.step(World.PHYSICS_DT);
         r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), 0, 0, 9000));
         w.advance(0.8);

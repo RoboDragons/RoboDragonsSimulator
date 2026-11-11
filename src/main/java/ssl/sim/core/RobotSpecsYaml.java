@@ -57,6 +57,7 @@ public final class RobotSpecsYaml {
         DOC.put("chipperPlateLength", "Length of the chipper plate [m]");
         DOC.put("chipperTipExtension", "Extension of the chipper plate tip beyond the ball contact point [m]");
         DOC.put("notchHalfWidth", "Half width of the dribbler notch in the hull [m]");
+        DOC.put("sideCatchHalfWidth", "Half distance between the side catches (hull parts beside the dribbler notch that touch the ball laterally) [m]; >= radius = no catches");
         DOC.put("rollerDamperEnabled", "Roller can retract rearwards against a spring and damper [-]");
         DOC.put("rollerStroke", "Roller damper stroke [m]");
         DOC.put("rollerSpringK", "Roller damper spring stiffness [N/m]");
@@ -64,10 +65,12 @@ public final class RobotSpecsYaml {
         DOC.put("rollerDampingC", "Roller damper damping coefficient [N s/m]");
         DOC.put("rollerSlideMass", "Mass of the sliding roller assembly [kg]");
         DOC.put("kickerStroke", "Kicker plate stroke [m]");
+        DOC.put("kickReach", "Largest gap between the kicker plate and the ball for which a kick still reaches it; the stroke is extended over the gap [m]");
         DOC.put("dribblerMaterial", "Ball contact of the dribbler roller rubber: stiffness [N/m], dampingRatio [-], friction coefficient mu [-]");
         DOC.put("chipperMaterial", "Ball contact of the chipper plate: stiffness [N/m], dampingRatio [-], friction coefficient mu [-]");
         DOC.put("kickerMaterial", "Ball contact of the metal kicker plate: stiffness [N/m], dampingRatio [-], friction coefficient mu [-]");
         DOC.put("bodyMaterial", "Ball contact of the robot hull: stiffness [N/m], dampingRatio [-], friction coefficient mu [-]");
+        DOC.put("sideCatchMaterial", "Ball contact of the side catches beside the dribbler notch: stiffness [N/m], dampingRatio [-], friction coefficient mu [-]");
         DOC.put("kickerPlateThickness", "Kicker plate thickness [m]");
         DOC.put("kickerPlateHeight", "Kicker plate height [m]");
     }
