@@ -76,13 +76,15 @@ public class Robot extends RigidBody2D {
         double reach = specs.radius + ball.radius() + 0.02;
         if (ball.position2D().distance(position()) > reach) return;
         if (ball.z() - ball.radius() >= specs.height) return;
-        for (ConvexPolygon piece : shape.ballPieces()) {
-            ConvexPolygon p = piece.transform(x, y, theta);
+        java.util.List<ConvexPolygon> pieces = shape.ballPieces();
+        for (int pi = 0; pi < pieces.size(); pi++) {
+            ConvexPolygon p = pieces.get(pi).transform(x, y, theta);
             Collisions.Contact c = Collisions.circleVsPolygon(ball.position2D(), ball.radius(), p);
             if (c == null) continue;
             Vector3D n = new Vector3D(c.normal().getX(), c.normal().getY(), 0);
             Vector2D sv = velocityAt(c.point());
-            Vector3D f = BallContacts.resolve(ball, n, c.depth(), new Vector3D(sv.getX(), sv.getY(), 0), bodyMaterial, dt);
+            Vector3D f = BallContacts.resolve(ball, n, c.depth(), new Vector3D(sv.getX(), sv.getY(), 0),
+                    pi == 0 ? bodyMaterial : specs.sideCatchMaterial, dt); // piece 0 = rear body, the others are the side catches
             applyForceAt(c.point(), new Vector2D(-f.getX(), -f.getY()));
             ball.markTouched(this, time);
         }

@@ -20,6 +20,18 @@ public final class BallContacts {
      * @return total force applied on the ball (the reaction on the other body is the negative)
      */
     public static Vector3D resolve(Ball ball, Vector3D n, double depth, Vector3D surfaceVel, Material mat, double dt) {
+        return resolve(ball, n, depth, surfaceVel, mat, dt, null, 0);
+    }
+
+    /**
+     * Same, for a surface that is itself driven by a body with finite inertia (a motor-driven roller): the friction impulse that
+     * removes the slip is shared between the ball and that body. {@code coupledDir} is the unit direction along which the surface
+     * can move (the roller's rotation direction) and {@code coupledInvMass} its effective inverse mass at the contact
+     * (r^2 / J for a roller of radius r and inertia J). With a large friction coefficient the contact then sticks (rolls without slip)
+     * and the load shows up as a speed drop of the driven body.
+     */
+    public static Vector3D resolve(Ball ball, Vector3D n, double depth, Vector3D surfaceVel, Material mat, double dt,
+                                   Vector3D coupledDir, double coupledInvMass) {
         final double R = ball.radius(), m = ball.mass(), I = ball.inertia();
         Vector3D rc = n.scalarMultiply(-R); // contact point relative to ball centre
         double vn = ball.velocity().subtract(surfaceVel).dotProduct(n);
@@ -32,6 +44,10 @@ public final class BallContacts {
         Vector3D force = n.scalarMultiply(fn);
         if (sp > 1e-9 && fn > 0) {
             double meffInv = 1.0 / m + R * R / I;
+            if (coupledDir != null) {
+                double along = vt.dotProduct(coupledDir) / sp;
+                meffInv += coupledInvMass * along * along;
+            }
             double j = Math.min(mat.mu() * fn * dt, sp / meffInv);
             force = force.add(vt.scalarMultiply(-j / dt / sp));
         }

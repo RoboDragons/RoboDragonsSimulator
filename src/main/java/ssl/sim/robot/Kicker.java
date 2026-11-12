@@ -42,6 +42,7 @@ public class Kicker implements RobotComponent {
     private boolean stroking;
     private boolean strokeChip;
     private double vPlate, strokeLen, travel, speedNow, dirX, dirZ, endTimer;
+    private double approach; // distance the plate is moved up to a ball that is not touching [m]
 
     public Kicker(RobotSpecs specs) {
         this.specs = specs;
@@ -84,11 +85,11 @@ public class Kicker implements RobotComponent {
     @Override
     public void update(Robot robot, Ball ball, double dt) {
         charge = Math.min(1.0, charge + dt / chargeTime);
-        if (!stroking && pending) tryStart(robot);
+        if (!stroking && pending) tryStart(robot, ball);
         if (stroking) stroke(robot, ball, dt);
     }
 
-    private void tryStart(Robot robot) {
+    private void tryStart(Robot robot, Ball ball) {
         boolean chip = pendingAngle > 0.5;
         double vMax = chip ? specs.maxChipKickSpeed : specs.maxLinearKickSpeed;
         double speed = Math.min(pendingSpeed, vMax);
@@ -105,10 +106,42 @@ public class Kicker implements RobotComponent {
         dirX = Math.cos(a);
         dirZ = Math.sin(a);
         vPlate = speed / (1 + restitution()) * speedCalibration;
+        // a ball that is close but not touching: the plate is brought up to it first (about 1 mm gap, like a ball in the hold), then
+        // the normal stroke follows, so the ball leaves with the commanded speed whatever the gap
+        double gap = gapToBall(robot, ball);
+        approach = gap > 0.001 && gap <= specs.kickReach ? gap - 0.001 : 0;
         strokeLen = specs.kickerStroke;
         travel = 0;
         speedNow = 0;
         endTimer = 0;
+    }
+
+    /**
+     * Distance [m] from the plate (at rest) to the ball surface along the kick direction, or 0 if the ball is not in front of the
+     * plate (beside it, behind it or already touching).
+     */
+    private double gapToBall(Robot robot, Ball ball) {
+        Vector2D bl = robot.toLocal(ball.position2D());
+        if (Math.abs(bl.getY()) > plateHalfWidth + ball.radius() * 0.5) return 0;
+        double ax, az, bx, bz;
+        if (!strokeChip) {
+            ax = bx = specs.kickerFrontX();
+            az = specs.kickerCenterZ() - specs.kickerPlateHeight / 2;
+            bz = specs.kickerCenterZ() + specs.kickerPlateHeight / 2;
+        } else {
+            double[] pc = specs.chipperContact();
+            double tx = -dirZ, tz = dirX;
+            ax = pc[0] - 0.004 * tx;
+            az = Math.max(0.001, pc[1] - 0.004 * tz);
+            bx = pc[0] + chipPlateLength * tx;
+            bz = pc[1] + chipPlateLength * tz;
+        }
+        double ex = bx - ax, ez = bz - az;
+        double t = Math.max(0, Math.min(1, ((bl.getX() - ax) * ex + (ball.z() - az) * ez) / (ex * ex + ez * ez)));
+        double dx = bl.getX() - (ax + t * ex), dz = ball.z() - (az + t * ez);
+        // only a ball in front of the plate (in the kick direction) counts
+        if (dx * dirX + dz * dirZ <= 0) return 0;
+        return Math.max(0, Math.hypot(dx, dz) - ball.radius());
     }
 
     private void stroke(Robot robot, Ball ball, double dt) {
@@ -122,13 +155,14 @@ public class Kicker implements RobotComponent {
             if (endTimer > 0.01) { // the plate has stopped; the ball has left
                 stroking = false;
                 travel = 0;
+                approach = 0;
                 return;
             }
         }
         // plate segment in the robot's x-z plane (front face), displaced by the travel along the stroke direction
         double ax, az, bx, bz;
         if (!strokeChip) {
-            double x0 = specs.kickerFrontX() + travel;
+            double x0 = specs.kickerFrontX() + approach + travel;
             ax = bx = x0;
             az = specs.kickerCenterZ() - specs.kickerPlateHeight / 2;
             bz = specs.kickerCenterZ() + specs.kickerPlateHeight / 2;
@@ -136,10 +170,10 @@ public class Kicker implements RobotComponent {
             double[] pc = specs.chipperContact(); // ramp through the usual contact point, normal along the stroke direction
             double tx = -dirZ, tz = dirX;          // tangent, pointing up/back
             double e = 0.004;
-            ax = pc[0] + dirX * travel - e * tx;
-            az = Math.max(0.001, pc[1] + dirZ * travel - e * tz);
-            bx = pc[0] + dirX * travel + chipPlateLength * tx;
-            bz = pc[1] + dirZ * travel + chipPlateLength * tz;
+            ax = pc[0] + dirX * (approach + travel) - e * tx;
+            az = Math.max(0.001, pc[1] + dirZ * (approach + travel) - e * tz);
+            bx = pc[0] + dirX * (approach + travel) + chipPlateLength * tx;
+            bz = pc[1] + dirZ * (approach + travel) + chipPlateLength * tz;
         }
         Vector2D bl = robot.toLocal(ball.position2D());
         if (Math.abs(bl.getY()) > plateHalfWidth + ball.radius() * 0.5) return;

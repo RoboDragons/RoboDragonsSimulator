@@ -87,11 +87,13 @@ class PhysicsTest {
         Robot r = w.addRobot(Robot.Team.BLUE, 0, s, 0, 0, 0);
         double holdX = s.centerToDribbler + 0.0129;
         w.ball().teleport(new Vector3D(0.35, 0, 0.0215), Vector3D.ZERO, false);
-        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 9000));
+        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0.4, 0, 0), 0, 0, 2000));
         w.advance(1.0);
-        r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), 0, 0, 9000));
-        w.advance(1.0);
-        assertTrue(r.dribbler().hasBallContact(), "ball should touch the roller");
+        for (int i = 1; i <= 100; i++) { // raise the roller speed over 1 s: a sudden spin-up of the resting ball throws it off the roller
+            r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(0, 0, 0), 0, 0, 2000 + 7000.0 * i / 100));
+            w.advance(0.01);
+        }
+        assertTrue(w.ball().position2D().distance(r.toWorld(holdX, 0)) < 0.004, "ball should rest at the roller");
         r.applyCommand(new RobotCommand(new RobotCommand.LocalVelocity(-0.5, 0, 0), 0, 0, 9000));
         w.advance(1.5);
         double dist = w.ball().position2D().distance(r.toWorld(holdX, 0));
