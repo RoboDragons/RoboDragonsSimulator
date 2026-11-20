@@ -55,10 +55,24 @@ public class Ball {
     public double z() { return z; }
     public boolean onGround() { return z <= params.radius + 1e-5 && vz <= 1e-3; }
 
+    private int contacts, contactsPrev;
+
+    /** Counts a penalty contact of this step (the simultaneous contacts share the ball's inertia, see BallContacts). */
+    public void registerContact() { contacts++; }
+
+    /** Number of penalty contacts acting on the ball at the same time (this step so far or the previous step, at least 1). */
+    public int sharedContacts() { return Math.max(1, Math.max(contacts, contactsPrev)); }
+
     public Robot lastTouchedBy() { return lastTouchedBy; }
     public double lastTouchTime() { return lastTouchTime; }
 
+    private double contestTime = Double.NEGATIVE_INFINITY;
+
+    /** True while two different robots touch the ball at (nearly) the same time, e.g. it is squeezed between two dribblers. */
+    public boolean isContested(double time) { return time - contestTime < 0.05; }
+
     public void markTouched(Robot r, double time) {
+        if (lastTouchedBy != null && lastTouchedBy != r && time - lastTouchTime <= 0.002) contestTime = time;
         lastTouchedBy = r;
         lastTouchTime = time;
     }
@@ -123,6 +137,9 @@ public class Ball {
     }
 
     public void step(double dt) {
+        final int others = Math.max(contacts, contactsPrev); // contacts that act on the ball besides the ground
+        contactsPrev = contacts;
+        contacts = 0;
         final double R = params.radius, m = params.mass, I = inertia();
         final double meffInv = 1.0 / m + R * R / I;
         boolean grounded = onGround();
@@ -132,7 +149,7 @@ public class Ball {
             double slipX = vx - wy * R, slipY = vy + wx * R;
             double sp = Math.hypot(slipX, slipY);
             if (sp > 1e-9) {
-                double j = Math.min(params.muSlide * n * dt, sp / meffInv);
+                double j = Math.min(params.muSlide * n * dt, sp / meffInv / (1 + others)); // shares the slip with the other contacts
                 double gfx = -slipX / sp * j / dt, gfy = -slipY / sp * j / dt;
                 fx += gfx;
                 fy += gfy;

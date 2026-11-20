@@ -13,6 +13,7 @@ public class OmniDrive implements RobotComponent {
     private double cmdVx, cmdVy, cmdW; // current acceleration-limited set point in the body frame
     private final boolean erForce;
     private double lastCommandTime = Double.NEGATIVE_INFINITY;
+    private double holdAccF, holdAccR; // integral part of the standing-still controller (forward / right acceleration) [m/s^2]
     private final org.apache.commons.math3.linear.RealMatrix coupling, couplingPinv;
 
     public OmniDrive(RobotSpecs specs) {
@@ -29,6 +30,8 @@ public class OmniDrive implements RobotComponent {
         for (int i = 0; i < wheels.length; i++) {
             wheels[i] = new OmniWheel(specs.wheelAngles[i], specs.wheelMountRadius, specs.wheelRadius,
                     specs.gearRatio, DCMotor.wheelMotor());
+            wheels[i].muTraction = specs.wheelMuTraction;
+            wheels[i].pushRatio = specs.wheelPushRatio;
         }
     }
 
@@ -146,22 +149,42 @@ public class OmniDrive implements RobotComponent {
         double k = 1.0 / specs.erVelocityTimeConstant;
         double aF = k * (dF - vF), aR = k * (-dL - vR), aW = k * (dW - w);
         aW += specs.rotationError * aF;
+        // commanded to stand still (and not fast): the wheels hold the robot against a push with their full grip and an integral
+        // term removes the creep of the pure velocity loop; pushing is limited by the (smaller) speed-up limit instead
+        boolean hold = Math.hypot(dF, dL) < 0.02 && Math.abs(dW) < 0.1 && Math.hypot(vF, vR) < 1.0 && Math.abs(w) < 3.0;
+        double tractionAcc = specs.wheelMuTraction * Ball.G;
+        if (hold) {
+            double ki = k / 0.02;
+            holdAccF = clamp(holdAccF + ki * (dF - vF) * dt, tractionAcc);
+            holdAccR = clamp(holdAccR + ki * (-dL - vR) * dt, tractionAcc);
+            aF += holdAccF;
+            aR += holdAccR;
+        } else {
+            holdAccF = holdAccR = 0;
+        }
         // limit through the wheel coupling (speed-up / brake limits per wheel, like ER-Force's limitAcceleration)
         double[] speed = {vR, vF, w};
         double[] wheelSpeed = coupling.operate(speed);
         double[] wheelAcc = coupling.operate(new double[]{aR, aF, aW});
         for (int i = 0; i < 4; i++) {
             boolean speedingUp = Math.signum(wheelAcc[i]) == Math.signum(wheelSpeed[i]) || wheelSpeed[i] == 0;
-            double lim = speedingUp ? specs.erWheelAccelSpeedup : specs.erWheelAccelBrake;
+            double lim = hold ? specs.erWheelAccelHold : speedingUp ? specs.erWheelAccelSpeedup : specs.erWheelAccelBrake;
             wheelAcc[i] = Math.max(-lim, Math.min(lim, wheelAcc[i]));
         }
         double[] a = couplingPinv.operate(wheelAcc); // (right, forward, yaw)
+        double aTr = Math.hypot(a[0], a[1]); // the wheels cannot transmit more than their grip
+        if (aTr > tractionAcc) {
+            a[0] *= tractionAcc / aTr;
+            a[1] *= tractionAcc / aTr;
+        }
         double m = robot.mass();
         robot.applyForce(new org.apache.commons.math3.geometry.euclidean.twod.Vector2D(
                 m * (a[1] * c + a[0] * sn), m * (a[1] * sn - a[0] * c)));
         robot.applyTorque(robot.inertia() * a[2]);
         syncWheels(vF, -vR, w);
     }
+
+    private static double clamp(double v, double lim) { return Math.max(-lim, Math.min(lim, v)); }
 
     /** Wheels roll without slip in this model; keep their speed consistent with the body motion (display / telemetry). */
     private void syncWheels(double vF, double vL, double w) {

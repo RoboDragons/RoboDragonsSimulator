@@ -19,6 +19,8 @@ public class OmniWheel {
     public final DCMotor motor;
     public double wheelInertia = 1.0e-4;
     public double muTraction = 1.3;
+    /** Fraction of the traction usable for pushing in the commanded direction (resisting a push may use all of it). */
+    public double pushRatio = 1.0;
     /** Lateral resistance (rollers) [N s/m]. */
     public double lateralDamping = 0.3;
     public double slipRegularisation = 0.03;
@@ -68,7 +70,8 @@ public class OmniWheel {
         double jRef = wheelInertia + gearRatio * gearRatio * motor.rotorInertia;
         double normal = robot.mass() * Ball.G / wheelCount;
         double slip = omega * wheelRadius - vAlong;
-        double fMax = muTraction * normal;
+        boolean pushing = Math.abs(targetSurfaceSpeed) > 0.05 && Math.signum(slip) == Math.signum(targetSurfaceSpeed);
+        double fMax = muTraction * normal * (pushing ? pushRatio : 1.0);
         double mInv = 1.0 / robot.mass() + wheelRadius * wheelRadius / jRef;
         double f = fMax * Math.max(-1, Math.min(1, slip / slipRegularisation));
         double fZero = Math.abs(slip) / (dt * mInv);
