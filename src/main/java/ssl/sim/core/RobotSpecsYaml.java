@@ -44,6 +44,9 @@ public final class RobotSpecsYaml {
         DOC.put("erVelocityTimeConstant", "ER_FORCE: time constant of the velocity control (5 ms / ln 2) [s]");
         DOC.put("erWheelAccelSpeedup", "ER_FORCE: wheel acceleration limit when speeding up [rev/s^2]");
         DOC.put("erWheelAccelBrake", "ER_FORCE: wheel acceleration limit when braking [rev/s^2]");
+        DOC.put("erWheelAccelHold", "ER_FORCE: wheel acceleration limit when commanded to stand still and pushed (holding force, larger than the pushing force) [rev/s^2]");
+        DOC.put("wheelMuTraction", "Friction coefficient between wheels and floor; wheel traction (mu * load) bounds the drive force [-]");
+        DOC.put("wheelPushRatio", "MOTOR: fraction of the wheel traction usable to push in the commanded direction; resisting a push uses all of it [-]");
         DOC.put("erWheelDiameter", "ER_FORCE: wheel diameter used to convert wheel revolutions to body speed [m]");
         DOC.put("commandTimeout", "A command expires after this time without a new one; the robot then coasts [s]");
         DOC.put("erLinearDamping", "ER_FORCE: translational damping of a coasting robot [1/s]");

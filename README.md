@@ -26,7 +26,7 @@ Math: Apache Commons Math 3. Protocol: the attached protobuf files (`src/main/pr
 - `vision.Camera`/`VisionSystem`: pinhole cameras with calibration, noise, latency. `core.World`/`Simulator`: world stepping (0.5 ms), real-time thread.
 - `net`: protobuf conversion and UDP servers. `viewer`: LWJGL OpenGL 3.3 viewer (low-poly, one shader).
 
-Viewer keys: mouse orbit/pan/zoom, 1-4 camera presets, V cameras, Space pause, [ ] speed, Tab/T select robot,
+Viewer keys: mouse orbit/pan/zoom, right click on a robot removes it, 1-4 camera presets, V cameras, Space pause, [ ] speed, Tab/T select robot,
 M manual drive (W/S/A/D/Q/E, Shift fast, R dribbler, F kick, C chip), B ball to centre.
 `--screenshot file.png` saves a frame and exits.
 
@@ -59,6 +59,13 @@ Layout (all derived in `RobotSpecs`, robot frame x forward, z up) for the held b
 Physics: roller, chipper plate and ground are separate penalty contacts with Coulomb friction on the full slip (spin included).
 - **3-point hold** (roller + chipper + ground) and **2-point hold** (`chipperEnabled: false`, roller + ground) both come out of the simulation, and `DribblerStatics` solves the same static force balance analytically
   (3 point: Nr, Nc, Ng with sliding contacts; 2 point: roller sticks, unknowns Nr, Fr, Ng, check Fr <= mu*Nr). `--dribble-statics` prints both; `DribbleTest` checks that simulated normal forces and hold position match.
+- **Ball between two dribblers** (two robots contesting the ball head on): the simultaneous contacts share the ball's inertia (each takes only a `1/N` share of the slip /
+  damping correction per step, `BallContacts` / `Ball.sharedContacts`), and the friction limit uses the elastic part of the normal force only. The opposing rollers then cancel:
+  the ball hardly spins (mean of the roller surface speeds) or slips on one roller and stays put, instead of flipping its spin every step and being thrown out. `FaceOffTest` checks this.
+- **Pushing < holding**: a robot commanded to stand still resists a push with the wheel grip (`erWheelAccelHold` for ER_FORCE, `wheelMuTraction` for MOTOR), whereas a robot can only push
+  with its speed-up limit (`erWheelAccelSpeedup`; MOTOR: `wheelPushRatio` of the grip), so a robot that stays put is not pushed away.
+- **No sideways force from a squeezed ball**: while two robots touch the ball at the same time (`Ball.isContested`), the ball can slip sideways on the rollers, so each robot only feels the contact force along its own axis on its
+  centre line (`Robot.applyBallReaction`; dribbler, side catches, kicker, chipper). A slightly offset pair (up to 1 cm, 1 m/s each) then neither spins nor slides past; the drive controllers are unchanged.
 - Ball-wall friction: `ball.muWall` (default 0.05) so that a spinning dribbler can pull a ball off a wall.
 
 ## Roller damper (optional, `robot.rollerDamperEnabled`, default off)

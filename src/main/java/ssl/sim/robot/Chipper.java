@@ -64,7 +64,7 @@ public class Chipper implements RobotComponent {
         Vector2D cp = robot.toWorld(qx, bl.getY());
         Vector2D rv = robot.velocityAt(cp);
         Vector3D f = BallContacts.resolve(ball, n, depth, new Vector3D(rv.getX(), rv.getY(), 0), plate, dt);
-        robot.applyForceAt(cp, new Vector2D(-f.getX(), -f.getY()));
+        robot.applyBallReaction(ball, cp, new Vector2D(-f.getX(), -f.getY()));
         contact = true;
         normalForce = f.dotProduct(n);
         ball.markTouched(robot, robot.time());

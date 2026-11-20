@@ -192,7 +192,7 @@ public class Kicker implements RobotComponent {
         Vector2D pv = robot.rotateToWorld(speedNow * dirX, 0);
         Vector3D surface = new Vector3D(rv.getX() + pv.getX(), rv.getY() + pv.getY(), speedNow * dirZ);
         Vector3D f = BallContacts.resolve(ball, n, depth, surface, plate, dt);
-        robot.applyForceAt(cp, new Vector2D(-f.getX(), -f.getY()));
+        robot.applyBallReaction(ball, cp, new Vector2D(-f.getX(), -f.getY()));
         ball.markTouched(robot, robot.time());
     }
 }

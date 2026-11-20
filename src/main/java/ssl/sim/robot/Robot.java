@@ -85,9 +85,22 @@ public class Robot extends RigidBody2D {
             Vector2D sv = velocityAt(c.point());
             Vector3D f = BallContacts.resolve(ball, n, c.depth(), new Vector3D(sv.getX(), sv.getY(), 0),
                     pi == 0 ? bodyMaterial : specs.sideCatchMaterial, dt); // piece 0 = rear body, the others are the side catches
-            applyForceAt(c.point(), new Vector2D(-f.getX(), -f.getY()));
+            applyBallReaction(ball, c.point(), new Vector2D(-f.getX(), -f.getY()));
             ball.markTouched(this, time);
         }
+    }
+
+    /**
+     * Reaction of a ball contact on the robot. A ball that is squeezed between two robots is free to slip sideways on the rollers, so
+     * the robot only feels the force along its own axis, acting on its centre line: no sideways force and no torque (that would
+     * make the pair slide past each other), whatever the offset of the ball.
+     */
+    public void applyBallReaction(Ball ball, Vector2D point, Vector2D force) {
+        if (!ball.isContested(time)) {
+            applyForceAt(point, force);
+            return;
+        }
+        applyForceAt(toWorld(toLocal(point).getX(), 0), rotateToWorld(force.dotProduct(rotateToWorld(1, 0)), 0));
     }
 
     public void integratePhysics(double dt) { integrate(dt); }

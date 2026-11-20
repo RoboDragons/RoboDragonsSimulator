@@ -35,7 +35,14 @@ public final class BallContacts {
         final double R = ball.radius(), m = ball.mass(), I = ball.inertia();
         Vector3D rc = n.scalarMultiply(-R); // contact point relative to ball centre
         double vn = ball.velocity().subtract(surfaceVel).dotProduct(n);
+        // All contacts act on the same ball state within a step. If each of N simultaneous contacts removed all of "its" slip /
+        // velocity, the sum would over-correct (e.g. a ball squeezed between two opposite rollers would flip its spin every step and
+        // finally be thrown out). So every contact only takes a 1/N share of the correction: a ball held by opposing rollers ends with
+        // the mean of their surface speeds (about no spin) and slips on the weaker one instead of oscillating.
+        ball.registerContact();
+        int shared = ball.sharedContacts();
         double c = 2 * mat.dampingRatio() * Math.sqrt(mat.stiffness() * m);
+        c /= Math.max(1.0, shared * c * dt / m); // the explicit dampers of all contacts together reverse the velocity at most once
         double fn = Math.max(0, mat.stiffness() * depth - c * vn);
 
         Vector3D rel = ball.surfaceVelocity(rc).subtract(surfaceVel);
@@ -48,7 +55,10 @@ public final class BallContacts {
                 double along = vt.dotProduct(coupledDir) / sp;
                 meffInv += coupledInvMass * along * along;
             }
-            double j = Math.min(mat.mu() * fn * dt, sp / meffInv);
+            // friction is bounded by the elastic part of the normal force: the velocity dependent damper part must not feed
+            // back into the tangential force (a wedge-like contact would then show negative damping)
+            double fnFric = Math.min(fn, mat.stiffness() * depth);
+            double j = Math.min(mat.mu() * fnFric * dt, sp / meffInv / shared);
             force = force.add(vt.scalarMultiply(-j / dt / sp));
         }
         ball.applyForce(force, rc);

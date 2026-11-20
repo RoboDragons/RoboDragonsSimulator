@@ -26,7 +26,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * OpenGL 3.3 core 3D viewer. Deliberately light-weight (low-poly meshes, one simple shader, no shadows
  * or post effects) so that it runs on integrated graphics.
  * <pre>
- * Mouse: left drag = orbit, right/middle drag = pan, wheel = zoom
+ * Mouse: left drag = orbit, right/middle drag = pan, wheel = zoom, right click (no drag) on a robot = remove it
  * 1..4 camera presets (top, angled, side, follow selected robot)     V toggle vision cameras
  * Space pause   [ / ] sim speed /2, x2   B ball to centre
  * Tab next robot   T switch team   M manual control of selected robot
@@ -60,6 +60,9 @@ public class Viewer {
     private double yaw = -Math.PI / 2, pitch = 0.9, dist = 9.0;
     private double targetX, targetY;
     private double lastMx, lastMy;
+    private double pressX, pressY;
+    /** A right button press/release closer than this (pixels) counts as a click, not a pan. */
+    private static final double CLICK_PIXELS = 4;
     private boolean dragL, dragR;
     private int preset = 0;
 
@@ -193,7 +196,10 @@ public class Viewer {
     }
 
     /** Ground (z = 0) point under the window position (mx, my) for the current camera, or null if the ray misses it. */
-    private double[] groundPointAt(double mx, double my) {
+    private double[] groundPointAt(double mx, double my) { return pointAt(mx, my, 0); }
+
+    /** Point at height {@code z} under the window position (mx, my) for the current camera, or null if the ray misses it. */
+    private double[] pointAt(double mx, double my, double z) {
         int[] ww = new int[1], wh = new int[1];
         glfwGetWindowSize(window, ww, wh);
         if (ww[0] <= 0 || wh[0] <= 0) return null;
@@ -211,7 +217,7 @@ public class Viewer {
         double dy = fy + ry * nx * th * aspect + uy * ny * th;
         double dz = fz + rz * nx * th * aspect + uz * ny * th;
         if (dz >= -1e-9) return null;
-        double t = -ez / dz;
+        double t = (z - ez) / dz;
         return new double[]{ex + t * dx, ey + t * dy};
     }
 
@@ -247,6 +253,14 @@ public class Viewer {
             glfwGetCursorPos(window, x, y);
             lastMx = x[0];
             lastMy = y[0];
+            if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                if (down) {
+                    pressX = x[0];
+                    pressY = y[0];
+                } else if (Math.hypot(x[0] - pressX, y[0] - pressY) < CLICK_PIXELS) {
+                    removeRobotAt(x[0], y[0]); // a click without a drag (drag = pan)
+                }
+            }
         });
         glfwSetCursorPosCallback(window, (w, x, y) -> {
             double dx = x - lastMx, dy = y - lastMy;
@@ -377,6 +391,26 @@ public class Viewer {
                     org.apache.commons.math3.geometry.euclidean.threed.Vector3D.ZERO, true));
             default -> { }
         }
+    }
+
+    /** Removes the robot under the window position (mx, my), if any. Picks the nearest robot centre within its radius. */
+    private void removeRobotAt(double mx, double my) {
+        World w = sim.world();
+        locked(() -> {
+            Robot best = null;
+            double bestD = Double.MAX_VALUE;
+            for (Robot r : w.robots()) {
+                // the ray is intersected at mid-height so that a click on the body of a tall robot also hits it
+                double[] p = pointAt(mx, my, r.specs().height / 2);
+                if (p == null) continue;
+                double d = Math.hypot(p[0] - r.x(), p[1] - r.y());
+                if (d <= r.specs().radius && d < bestD) {
+                    best = r;
+                    bestD = d;
+                }
+            }
+            if (best != null) w.removeRobot(best.team, best.id);
+        });
     }
 
     private void locked(Runnable r) {

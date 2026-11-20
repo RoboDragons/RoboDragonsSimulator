@@ -44,6 +44,20 @@ public class RobotSpecs {
     public double erVelocityTimeConstant = 0.005 / Math.log(2);
     /** Wheel acceleration limits [rev/s^2] of the ER-Force robot generations (simulation_limits). */
     public double erWheelAccelSpeedup = 35, erWheelAccelBrake = 30;
+    /**
+     * ER_FORCE: wheel acceleration limit [rev/s^2] for standing one's ground: while the robot is commanded to stand still (and is
+     * not fast) its wheels hold it against an external push with this much force. 120 rev/s^2 of a 45 mm wheel is 17 m/s^2,
+     * about the grip of the wheels (wheelMuTraction * g), and much more than the force the robot can push with
+     * (erWheelAccelSpeedup): as for real robots, pushing a robot that stays put does not move it.
+     */
+    public double erWheelAccelHold = 120;
+    /** Friction coefficient between the wheels and the floor: wheel traction (mu * normal load) bounds every drive force. */
+    public double wheelMuTraction = 2.0;
+    /**
+     * MOTOR: fraction of the wheel traction that can be used to push in the commanded direction (power / acceleration limited);
+     * resisting a push (braking, holding, standing still) can use all of it.
+     */
+    public double wheelPushRatio = 0.65;
     /** Diameter used by ER-Force to convert wheel revolutions to body speed. */
     public double erWheelDiameter = 0.045;
     /** Commands expire after this time without a new one (robot coasts). */
@@ -197,6 +211,9 @@ public class RobotSpecs {
         s.erVelocityTimeConstant = erVelocityTimeConstant;
         s.erWheelAccelSpeedup = erWheelAccelSpeedup;
         s.erWheelAccelBrake = erWheelAccelBrake;
+        s.erWheelAccelHold = erWheelAccelHold;
+        s.wheelMuTraction = wheelMuTraction;
+        s.wheelPushRatio = wheelPushRatio;
         s.erWheelDiameter = erWheelDiameter;
         s.commandTimeout = commandTimeout;
         s.erLinearDamping = erLinearDamping;

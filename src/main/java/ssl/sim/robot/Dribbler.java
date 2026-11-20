@@ -93,9 +93,9 @@ public class Dribbler implements RobotComponent {
                 Vector2D fxy = new Vector2D(f.getX(), f.getY());
                 double fx = fxy.dotProduct(robot.rotateToWorld(1, 0)), fy = fxy.dotProduct(robot.rotateToWorld(0, 1));
                 forceOnRollerRear = fx;
-                robot.applyForceAt(contactXY, robot.rotateToWorld(0, -fy));
+                if (!ball.isContested(robot.time())) robot.applyForceAt(contactXY, robot.rotateToWorld(0, -fy));
             } else {
-                robot.applyForceAt(contactXY, new Vector2D(-f.getX(), -f.getY()));
+                robot.applyBallReaction(ball, contactXY, new Vector2D(-f.getX(), -f.getY()));
             }
             ballTorque = rc.crossProduct(f.negate()).dotProduct(axisDir);
             contact = true;
