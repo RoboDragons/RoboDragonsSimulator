@@ -50,7 +50,7 @@ protobuf {
 application {
     mainClass = 'ssl.sim.Main'
     applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow'] +
-            (OperatingSystem.current().isMacOsX() ? ['-XstartOnFirstThread'] : [])
+            (OperatingSystem.current().isMacOsX() ? ['-XstartOnFirstThread', '-Djava.net.preferIPv4Stack=true'] : [])
 }
 
 tasks.named('test') {
