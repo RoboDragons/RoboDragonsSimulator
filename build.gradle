@@ -57,4 +57,9 @@ tasks.named('test') {
     useJUnitPlatform()
     jvmArgs '--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow'
     systemProperty 'study', System.getProperty('study', 'false')
+    // study options (CafeDribblerScenarioStudy): -Dreal=..., -Dout=..., -Dset.robot.KEY=..., -Dset.ball.KEY=...
+    System.properties.each { k, v ->
+        if (k == 'real' || k == 'out' || k == 'dump' || k.startsWith('set.')) systemProperty k, v
+    }
+    outputs.upToDateWhen { false }
 }

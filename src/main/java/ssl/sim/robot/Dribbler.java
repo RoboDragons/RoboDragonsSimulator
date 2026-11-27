@@ -23,15 +23,17 @@ import ssl.sim.ball.BallContacts;
 public class Dribbler implements RobotComponent {
     public BallContacts.Material rubber;
 
-    private final DCMotor motor = DCMotor.dribblerMotor();
+    private final DCMotor motor;
     private final RobotSpecs specs;
     private final double radius, nominalAxisX, axisZ, halfLength;
+    private boolean sinking; // the roller is free to sink back (rollerSinkSpeed > 0: only after a hard hit)
     private double slide, slideVel; // rearward retraction of the roller from its nominal position [m], [m/s]
     private double omega;       // roller angular velocity about the robot's +y axis [rad/s]
     private double targetRpm;
     private boolean contact;
     private double contactNormalForce;
-    private double rollerInertia = 5.0e-6;
+    private double axialForce; // ball -> roller force along the robot's x axis, rearward positive [N]
+    private final double rollerInertia;
 
     public Dribbler(RobotSpecs s) {
         this.radius = s.rollerRadius;
@@ -40,6 +42,10 @@ public class Dribbler implements RobotComponent {
         this.nominalAxisX = s.rollerAxisX();
         this.axisZ = s.rollerAxisZ();
         this.halfLength = s.rollerHalfLength;
+        DCMotor base = DCMotor.dribblerMotor();
+        this.motor = new DCMotor(s.dribblerMotorKt, s.dribblerMotorResistance, base.maxVoltage, s.dribblerMotorMaxCurrent,
+                base.rotorInertia, base.viscousFriction);
+        this.rollerInertia = s.rollerInertia;
     }
 
     public double targetRpm() { return targetRpm; }
@@ -48,6 +54,8 @@ public class Dribbler implements RobotComponent {
     public double rollerAngularVelocity() { return omega; }
     public boolean hasBallContact() { return contact; }
     public double contactNormalForce() { return contactNormalForce; }
+    /** Ball -> roller force along the robot's x axis in the last step, rearward positive [N]. */
+    public double axialForce() { return axialForce; }
     public double rollerRadius() { return radius; }
     /** Current x of the roller axis (moves when the damper is active). */
     public double axisX() { return nominalAxisX - slide; }
@@ -65,6 +73,7 @@ public class Dribbler implements RobotComponent {
         double ballTorque = 0;
         contact = false;
         contactNormalForce = 0;
+        axialForce = 0;
 
         double axisX = nominalAxisX - slide;
         double forceOnRollerRear = 0; // ball -> roller force along the slide axis, rearward positive
@@ -88,7 +97,15 @@ public class Dribbler implements RobotComponent {
             // the roller surface is driven by the motor and has inertia: the ball sticks to it (rubber, high mu) and loads the motor
             Vector3D f = BallContacts.resolve(ball, n, depth, surfaceVel, rubber, dt,
                     axisDir.crossProduct(n).normalize(), radius * radius / (rollerInertia + motor.rotorInertia));
-            if (specs.rollerDamperEnabled) {
+            axialForce = new Vector2D(f.getX(), f.getY()).dotProduct(robot.rotateToWorld(1, 0));
+            if (specs.rollerDamperEnabled && specs.rollerSinkSpeed > 0 && !sinking) {
+                // the roller only sinks back on a hard hit: the ball approaches the roller faster than rollerSinkSpeed
+                Vector3D bv = ball.velocity();
+                Vector2D rel = new Vector2D(bv.getX(), bv.getY()).subtract(robot.velocityAt(contactXY));
+                double approach = -rel.dotProduct(robot.rotateToWorld(1, 0)); // towards the robot, positive
+                if (approach > specs.rollerSinkSpeed) sinking = true;
+            }
+            if (specs.rollerDamperEnabled && (specs.rollerSinkSpeed <= 0 || sinking)) {
                 // axial part goes through the slider (and its spring/damper) to the robot, lateral part directly
                 Vector2D fxy = new Vector2D(f.getX(), f.getY());
                 double fx = fxy.dotProduct(robot.rotateToWorld(1, 0)), fy = fxy.dotProduct(robot.rotateToWorld(0, 1));
@@ -102,7 +119,11 @@ public class Dribbler implements RobotComponent {
             contactNormalForce = f.dotProduct(n);
             ball.markTouched(robot, robot.time());
         }
-        if (specs.rollerDamperEnabled) stepSlider(robot, axisX, forceOnRollerRear, dt);
+        if (specs.rollerDamperEnabled && (specs.rollerSinkSpeed <= 0 || sinking)) {
+            stepSlider(robot, axisX, forceOnRollerRear, dt);
+            // back on the stop and no longer pushed: the roller is held rigidly again until the next hard hit
+            if (specs.rollerSinkSpeed > 0 && slide <= 0 && slideVel <= 0 && forceOnRollerRear < specs.rollerPreload) sinking = false;
+        }
         double j = rollerInertia + motor.rotorInertia;
         omega += (motorTorque + ballTorque) / j * dt;
     }

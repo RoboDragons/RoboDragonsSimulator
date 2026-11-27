@@ -96,6 +96,16 @@ public class RobotSpecs {
     public double rollerPreload = 1.0;
     public double rollerDampingC = 20;
     public double rollerSlideMass = 0.03;
+    /** With the roller damper: the roller only sinks back when the ball hits it faster than this [m/s] (0 = always free). */
+    public double rollerSinkSpeed = 0.0;
+    /** Dribbler motor torque constant [Nm/A] (= back-EMF constant [V s/rad]). */
+    public double dribblerMotorKt = 0.0095;
+    /** Dribbler motor winding resistance [ohm]. */
+    public double dribblerMotorResistance = 0.5;
+    /** Dribbler motor current limit [A]. */
+    public double dribblerMotorMaxCurrent = 15.0;
+    /** Moment of inertia of the dribbler roller (without the motor rotor) [kg m^2]. */
+    public double rollerInertia = 5.0e-6;
     /** Plate stroke [m] of the kicker. */
     public double kickerStroke = 0.02;
     /**
@@ -129,7 +139,9 @@ public class RobotSpecs {
      * that even a fully retracted roller (ball pushed back by the stroke) covers at most {@code ballCoverage}.
      */
     public double nominalCoverage() {
-        return ballCoverage - (rollerDamperEnabled ? rollerStroke / (2 * BALL_RADIUS) : 0);
+        // a roller that only sinks on a hard hit (rollerSinkSpeed > 0) keeps the held ball where it is without a damper;
+        // the coverage then exceeds ballCoverage only momentarily while the roller is pushed back
+        return ballCoverage - (rollerDamperEnabled && rollerSinkSpeed <= 0 ? rollerStroke / (2 * BALL_RADIUS) : 0);
     }
 
     /** Largest coverage the ball can reach (roller fully retracted). */
@@ -241,6 +253,11 @@ public class RobotSpecs {
         s.rollerPreload = rollerPreload;
         s.rollerDampingC = rollerDampingC;
         s.rollerSlideMass = rollerSlideMass;
+        s.rollerSinkSpeed = rollerSinkSpeed;
+        s.dribblerMotorKt = dribblerMotorKt;
+        s.dribblerMotorResistance = dribblerMotorResistance;
+        s.dribblerMotorMaxCurrent = dribblerMotorMaxCurrent;
+        s.rollerInertia = rollerInertia;
         s.kickerStroke = kickerStroke;
         s.kickReach = kickReach;
         s.dribblerMaterial = dribblerMaterial;

@@ -67,6 +67,11 @@ public final class RobotSpecsYaml {
         DOC.put("rollerPreload", "Roller damper spring preload force [N]");
         DOC.put("rollerDampingC", "Roller damper damping coefficient [N s/m]");
         DOC.put("rollerSlideMass", "Mass of the sliding roller assembly [kg]");
+        DOC.put("rollerSinkSpeed", "Roller damper: the roller only sinks back when the ball hits it faster than this [m/s] and is held rigidly otherwise (0 = always free)");
+        DOC.put("dribblerMotorKt", "Dribbler motor torque constant [Nm/A] (= back-EMF constant [V s/rad]); the roller is driven at a constant voltage kt * target speed");
+        DOC.put("dribblerMotorResistance", "Dribbler motor winding resistance [ohm]; higher = the roller slows down more under load");
+        DOC.put("dribblerMotorMaxCurrent", "Dribbler motor current limit [A]; limits the torque that spins up a captured ball");
+        DOC.put("rollerInertia", "Moment of inertia of the dribbler roller without the motor rotor [kg m^2]");
         DOC.put("kickerStroke", "Kicker plate stroke [m]");
         DOC.put("kickReach", "Largest gap between the kicker plate and the ball for which a kick still reaches it; the stroke is extended over the gap [m]");
         DOC.put("dribblerMaterial", "Ball contact of the dribbler roller rubber: stiffness [N/m], dampingRatio [-], friction coefficient mu [-]");
